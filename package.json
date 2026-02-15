@@ -9,8 +9,8 @@
     "build:client": "vite build --config vite.config.ts",
     "build": "bun run build:client",
     "start": "bun src/server/index.ts",
-    "db:push": "bunx drizzle-kit push",
-    "db:studio": "bunx drizzle-kit studio"
+    "db:push": "bun drizzle-kit push",
+    "db:studio": "bun drizzle-kit studio"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.18",
