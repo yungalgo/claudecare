@@ -1,4 +1,4 @@
-import PgBoss from "pg-boss";
+import { PgBoss } from "pg-boss";
 import { scheduleCallBatches } from "./scheduler.ts";
 import { processCall } from "./call-processor.ts";
 import { processPostCall } from "./post-call.ts";
