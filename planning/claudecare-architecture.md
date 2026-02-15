@@ -1,4 +1,4 @@
-# WellSignal — Architecture & Setup Guide
+# claudecare — Architecture & Setup Guide
 
 ## Overview
 
@@ -64,7 +64,7 @@ one Bun process (Bun.serve)
 ## Project Structure
 
 ```
-wellsignal/
+claudecare/
 ├── src/
 │   ├── server/
 │   │   ├── index.ts              ← Entry point: Hono + Bun.serve (HTTP + WS)
@@ -119,7 +119,7 @@ wellsignal/
 ### 1. Create the project
 
 ```bash
-mkdir wellsignal && cd wellsignal
+mkdir claudecare && cd claudecare
 bun init -y
 ```
 
@@ -193,7 +193,7 @@ export default defineConfig({
 
 ```json
 {
-  "name": "wellsignal",
+  "name": "claudecare",
   "type": "module",
   "scripts": {
     "dev": "bun run --watch src/server/index.ts",
