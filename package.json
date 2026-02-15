@@ -10,7 +10,8 @@
     "build": "bun run build:client",
     "start": "bun src/server/index.ts",
     "db:push": "bun drizzle-kit push",
-    "db:studio": "bun drizzle-kit studio"
+    "db:studio": "bun drizzle-kit studio",
+    "test:call": "bun src/scripts/test-call.ts"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.18",
