@@ -144,6 +144,7 @@ research/
   02-CALL-PROTOCOL.md       — Complete call rubric with exact questions, scoring, escalation
   03-INFRASTRUCTURE-AND-SCALE.md — Twilio math, DB schema, system architecture, config
   04-EVIDENCE-BASE.md        — All primary study citations with exact findings
+  05-HACKATHON-RULES.md      — Rules, problem statements, judging criteria, strategic notes
 ```
 
 ---
