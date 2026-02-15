@@ -20,6 +20,11 @@ async function getBoss(): Promise<PgBoss> {
 export async function startWorkers() {
   const b = await getBoss();
 
+  // Create queues (idempotent)
+  await b.createQueue("schedule-calls");
+  await b.createQueue("process-call");
+  await b.createQueue("post-call");
+
   // Cron: schedule daily call batches at 9 AM
   await b.schedule("schedule-calls", "0 9 * * *");
   await b.work("schedule-calls", async () => {
