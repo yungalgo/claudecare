@@ -1,0 +1,6 @@
+[submodule "references/claude-cookbooks"]
+	path = references/claude-cookbooks
+	url = https://github.com/anthropics/claude-cookbooks
+[submodule "references/skills"]
+	path = references/skills
+	url = https://github.com/anthropics/skills
