@@ -20,10 +20,17 @@ interface EscalationRow {
   personPhone: string;
 }
 
+const filters = [
+  { key: "pending", label: "Pending" },
+  { key: "acknowledged", label: "Acknowledged" },
+  { key: "resolved", label: "Resolved" },
+  { key: "all", label: "All" },
+];
+
 export function Escalations() {
   const [escalations, setEscalations] = useState<EscalationRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<string>("pending");
+  const [filter, setFilter] = useState("pending");
 
   useEffect(() => {
     loadEscalations();
@@ -63,56 +70,59 @@ export function Escalations() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Escalations</h1>
-        <p className="text-muted-foreground text-sm mt-1">Review and manage flagged concerns.</p>
+        <h1 className="font-display text-2xl font-semibold text-foreground">Escalations</h1>
+        <p className="text-muted-foreground text-sm mt-1">Review and manage flagged concerns from wellness checks.</p>
       </div>
 
       {/* Filter tabs */}
-      <div className="flex gap-2">
-        {["pending", "acknowledged", "resolved", "all"].map((f) => (
-          <Button
-            key={f}
-            variant={filter === f ? "primary" : "outline"}
-            size="sm"
-            onClick={() => setFilter(f)}
+      <div className="flex gap-1.5 p-1 bg-muted rounded-xl w-fit">
+        {filters.map((f) => (
+          <button
+            key={f.key}
+            onClick={() => setFilter(f.key)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 cursor-pointer ${
+              filter === f.key
+                ? "bg-card text-foreground shadow-warm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
           >
-            {f.charAt(0).toUpperCase() + f.slice(1)}
-          </Button>
+            {f.label}
+          </button>
         ))}
       </div>
 
       <Card>
         <CardContent className="p-0">
           {loading ? (
-            <Spinner className="py-16" />
+            <Spinner className="py-20" />
           ) : escalations.length === 0 ? (
-            <EmptyState title="No escalations" description={`No ${filter} escalations found.`} />
+            <EmptyState title="No escalations" description={`No ${filter === "all" ? "" : filter + " "}escalations found.`} />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-border bg-muted/50">
-                    <th className="text-left p-4 font-medium text-muted-foreground">Tier</th>
-                    <th className="text-left p-4 font-medium text-muted-foreground">Person</th>
-                    <th className="text-left p-4 font-medium text-muted-foreground">Reason</th>
-                    <th className="text-left p-4 font-medium text-muted-foreground">Details</th>
-                    <th className="text-left p-4 font-medium text-muted-foreground">Status</th>
-                    <th className="text-left p-4 font-medium text-muted-foreground">Date</th>
-                    <th className="text-left p-4 font-medium text-muted-foreground">Actions</th>
+                  <tr className="border-b border-border">
+                    <th className="text-left p-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Tier</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Person</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Reason</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Details</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Status</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Date</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {escalations.map((row) => (
-                    <tr key={row.escalation.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+                    <tr key={row.escalation.id} className="border-b border-border/60 last:border-0 hover:bg-muted/30 transition-colors">
                       <td className="p-4"><TierBadge tier={row.escalation.tier} /></td>
                       <td className="p-4">
-                        <Link to={`/persons/${row.escalation.personId}`} className="text-primary hover:underline font-medium">
+                        <Link to={`/persons/${row.escalation.personId}`} className="text-foreground hover:text-primary font-medium transition-colors">
                           {row.personName}
                         </Link>
                       </td>
-                      <td className="p-4">{row.escalation.reason}</td>
+                      <td className="p-4 text-foreground">{row.escalation.reason}</td>
                       <td className="p-4 text-muted-foreground truncate max-w-xs">{row.escalation.details || "—"}</td>
                       <td className="p-4"><Badge variant="outline">{row.escalation.status}</Badge></td>
                       <td className="p-4 text-muted-foreground">{new Date(row.escalation.createdAt).toLocaleString()}</td>
@@ -124,7 +134,7 @@ export function Escalations() {
                             </Button>
                           )}
                           {row.escalation.status !== "resolved" && (
-                            <Button size="sm" variant="secondary" onClick={() => resolve(row.escalation.id)}>
+                            <Button size="sm" variant="ghost" onClick={() => resolve(row.escalation.id)}>
                               Resolve
                             </Button>
                           )}

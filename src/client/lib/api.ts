@@ -6,6 +6,10 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     ...options,
   });
   if (!res.ok) {
+    if (res.status === 401) {
+      window.location.href = "/login";
+      throw new Error("Unauthorized");
+    }
     const error = await res.json().catch(() => ({ error: res.statusText }));
     throw new Error(error.error ?? `Request failed: ${res.status}`);
   }

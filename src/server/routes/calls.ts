@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { db, schema } from "../lib/db.ts";
 import { eq, desc } from "drizzle-orm";
+import { getBoss } from "../jobs/boss.ts";
 
 export const callRoutes = new Hono();
 
@@ -41,8 +42,13 @@ callRoutes.post("/trigger", async (c) => {
     })
     .returning();
 
-  // TODO: Queue Twilio call via pg-boss
-  // await boss.send("process-call", { callId: call.id });
+  // Queue Twilio call via pg-boss
+  try {
+    const boss = await getBoss();
+    await boss.send("process-call", { callId: call.id });
+  } catch (err) {
+    console.warn("[calls/trigger] Failed to queue job:", err);
+  }
 
   return c.json(call, 201);
 });

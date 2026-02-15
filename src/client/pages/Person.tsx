@@ -57,6 +57,14 @@ interface EscalationData {
   personPhone: string;
 }
 
+const chartColors = {
+  Meals: "#2F855A",
+  Sleep: "#2563EB",
+  Health: "#0D756E",
+  Social: "#D69E2E",
+  Mobility: "#7C3AED",
+};
+
 export function Person() {
   const { id } = useParams<{ id: string }>();
   const [person, setPerson] = useState<PersonData | null>(null);
@@ -90,7 +98,6 @@ export function Person() {
     try {
       await api.post("/calls/trigger", { personId: id, callType: "weekly" });
       toast.success("Call triggered successfully");
-      // Refresh calls
       const c = await api.get<CallData[]>(`/calls?personId=${id}`);
       setCalls(c);
     } catch (err) {
@@ -103,7 +110,6 @@ export function Person() {
   if (loading) return <Spinner className="py-32" />;
   if (!person) return <EmptyState title="Person not found" />;
 
-  // Chart data (reverse so chronological)
   const chartData = [...assessments].reverse().map((a) => ({
     date: new Date(a.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
     Meals: a.meals,
@@ -111,56 +117,60 @@ export function Person() {
     Health: a.health,
     Social: a.social,
     Mobility: a.mobility,
-    "PHQ-2": a.phq2Score,
-    Ottawa: a.ottawaScore,
   }));
 
   return (
-    <div className="space-y-6">
-      {/* Back link + header */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex items-start justify-between">
         <div>
-          <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">
-            &larr; Back to Dashboard
+          <Link to="/dashboard" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4">
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
+            </svg>
+            Dashboard
           </Link>
-          <div className="flex items-center gap-3 mt-2">
-            <h1 className="text-2xl font-bold text-foreground">{person.name}</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="font-display text-2xl font-semibold text-foreground">{person.name}</h1>
             <FlagBadge flag={person.flag} />
             <Badge variant={person.status === "active" ? "success" : "outline"}>{person.status}</Badge>
           </div>
         </div>
-        <Button onClick={triggerCall} disabled={calling}>
+        <Button onClick={triggerCall} disabled={calling} variant="secondary">
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z" />
+          </svg>
           {calling ? "Calling..." : "Call Now"}
         </Button>
       </div>
 
       {/* Info cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 stagger-in">
         <Card>
           <CardHeader><CardTitle>Contact Info</CardTitle></CardHeader>
           <CardContent>
-            <dl className="space-y-2 text-sm">
-              <div><dt className="text-muted-foreground">Phone</dt><dd>{person.phone}</dd></div>
-              <div><dt className="text-muted-foreground">Last Call</dt><dd>{person.lastCallAt ? new Date(person.lastCallAt).toLocaleString() : "Never"}</dd></div>
-              <div><dt className="text-muted-foreground">Total Calls</dt><dd>{person.callCount}</dd></div>
+            <dl className="space-y-3 text-sm">
+              <InfoRow label="Phone" value={person.phone} mono />
+              <InfoRow label="Last Call" value={person.lastCallAt ? new Date(person.lastCallAt).toLocaleString() : "Never"} />
+              <InfoRow label="Total Calls" value={String(person.callCount)} />
             </dl>
           </CardContent>
         </Card>
         <Card>
           <CardHeader><CardTitle>Emergency Contact</CardTitle></CardHeader>
           <CardContent>
-            <dl className="space-y-2 text-sm">
-              <div><dt className="text-muted-foreground">Name</dt><dd>{person.emergencyContactName || "—"}</dd></div>
-              <div><dt className="text-muted-foreground">Phone</dt><dd>{person.emergencyContactPhone || "—"}</dd></div>
+            <dl className="space-y-3 text-sm">
+              <InfoRow label="Name" value={person.emergencyContactName} />
+              <InfoRow label="Phone" value={person.emergencyContactPhone} mono />
             </dl>
           </CardContent>
         </Card>
         <Card>
           <CardHeader><CardTitle>Primary Care Provider</CardTitle></CardHeader>
           <CardContent>
-            <dl className="space-y-2 text-sm">
-              <div><dt className="text-muted-foreground">Name</dt><dd>{person.pcpName || "—"}</dd></div>
-              <div><dt className="text-muted-foreground">Phone</dt><dd>{person.pcpPhone || "—"}</dd></div>
+            <dl className="space-y-3 text-sm">
+              <InfoRow label="Name" value={person.pcpName} />
+              <InfoRow label="Phone" value={person.pcpPhone} mono />
             </dl>
           </CardContent>
         </Card>
@@ -170,7 +180,9 @@ export function Person() {
       {person.notes && (
         <Card>
           <CardHeader><CardTitle>Notes</CardTitle></CardHeader>
-          <CardContent><p className="text-sm text-muted-foreground">{person.notes}</p></CardContent>
+          <CardContent>
+            <p className="text-sm text-muted-foreground leading-relaxed">{person.notes}</p>
+          </CardContent>
         </Card>
       )}
 
@@ -179,18 +191,24 @@ export function Person() {
         <Card>
           <CardHeader><CardTitle>Assessment Trends</CardTitle></CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={320}>
               <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-                <XAxis dataKey="date" fontSize={12} stroke="#64748B" />
-                <YAxis fontSize={12} stroke="#64748B" />
-                <Tooltip />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E8E3DB" />
+                <XAxis dataKey="date" fontSize={12} stroke="#6B6B7B" tickLine={false} axisLine={false} />
+                <YAxis fontSize={12} stroke="#6B6B7B" tickLine={false} axisLine={false} domain={[0, 5]} />
+                <Tooltip
+                  contentStyle={{
+                    background: "#FFFFFF",
+                    border: "1px solid #E8E3DB",
+                    borderRadius: "10px",
+                    boxShadow: "0 4px 12px rgba(26,26,46,0.06)",
+                    fontSize: "13px",
+                  }}
+                />
                 <Legend />
-                <Line type="monotone" dataKey="Meals" stroke="#16A34A" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="Sleep" stroke="#2563EB" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="Health" stroke="#0F766E" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="Social" stroke="#F59E0B" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="Mobility" stroke="#7C3AED" strokeWidth={2} dot={false} />
+                {Object.entries(chartColors).map(([key, color]) => (
+                  <Line key={key} type="monotone" dataKey={key} stroke={color} strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                ))}
               </LineChart>
             </ResponsiveContainer>
           </CardContent>
@@ -201,27 +219,29 @@ export function Person() {
       {escalations.length > 0 && (
         <Card>
           <CardHeader><CardTitle>Escalations</CardTitle></CardHeader>
-          <CardContent className="p-0 pt-4">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-muted/50">
-                  <th className="text-left p-3 font-medium text-muted-foreground">Tier</th>
-                  <th className="text-left p-3 font-medium text-muted-foreground">Reason</th>
-                  <th className="text-left p-3 font-medium text-muted-foreground">Status</th>
-                  <th className="text-left p-3 font-medium text-muted-foreground">Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {escalations.map((e) => (
-                  <tr key={e.escalation.id} className="border-b border-border last:border-0">
-                    <td className="p-3"><TierBadge tier={e.escalation.tier} /></td>
-                    <td className="p-3">{e.escalation.reason}</td>
-                    <td className="p-3"><Badge variant="outline">{e.escalation.status}</Badge></td>
-                    <td className="p-3 text-muted-foreground">{new Date(e.escalation.createdAt).toLocaleDateString()}</td>
+          <CardContent className="p-0 pt-2">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left p-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Tier</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Reason</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Status</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Date</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {escalations.map((e) => (
+                    <tr key={e.escalation.id} className="border-b border-border/60 last:border-0">
+                      <td className="p-4"><TierBadge tier={e.escalation.tier} /></td>
+                      <td className="p-4 text-foreground">{e.escalation.reason}</td>
+                      <td className="p-4"><Badge variant="outline">{e.escalation.status}</Badge></td>
+                      <td className="p-4 text-muted-foreground">{new Date(e.escalation.createdAt).toLocaleDateString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -229,41 +249,54 @@ export function Person() {
       {/* Call history */}
       <Card>
         <CardHeader><CardTitle>Call History</CardTitle></CardHeader>
-        <CardContent className="p-0 pt-4">
+        <CardContent className="p-0 pt-2">
           {calls.length === 0 ? (
             <EmptyState title="No calls yet" description="Trigger a call to get started." />
           ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-muted/50">
-                  <th className="text-left p-3 font-medium text-muted-foreground">Type</th>
-                  <th className="text-left p-3 font-medium text-muted-foreground">Status</th>
-                  <th className="text-left p-3 font-medium text-muted-foreground">Duration</th>
-                  <th className="text-left p-3 font-medium text-muted-foreground">Summary</th>
-                  <th className="text-left p-3 font-medium text-muted-foreground">Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {calls.map((call) => (
-                  <tr key={call.id} className="border-b border-border last:border-0">
-                    <td className="p-3"><Badge variant="outline">{call.callType}</Badge></td>
-                    <td className="p-3">
-                      <Badge variant={call.status === "completed" ? "success" : call.status === "failed" ? "danger" : "outline"}>
-                        {call.status}
-                      </Badge>
-                    </td>
-                    <td className="p-3 text-muted-foreground">
-                      {call.duration ? `${Math.floor(call.duration / 60)}:${String(call.duration % 60).padStart(2, "0")}` : "—"}
-                    </td>
-                    <td className="p-3 text-muted-foreground truncate max-w-sm">{call.summary || "—"}</td>
-                    <td className="p-3 text-muted-foreground">{new Date(call.createdAt).toLocaleString()}</td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left p-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Type</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Status</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Duration</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Summary</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Date</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {calls.map((call) => (
+                    <tr key={call.id} className="border-b border-border/60 last:border-0 hover:bg-muted/30 transition-colors">
+                      <td className="p-4"><Badge variant="outline">{call.callType}</Badge></td>
+                      <td className="p-4">
+                        <Badge variant={call.status === "completed" ? "success" : call.status === "failed" ? "danger" : "outline"}>
+                          {call.status}
+                        </Badge>
+                      </td>
+                      <td className="p-4 text-muted-foreground font-mono text-xs">
+                        {call.duration ? `${Math.floor(call.duration / 60)}:${String(call.duration % 60).padStart(2, "0")}` : "—"}
+                      </td>
+                      <td className="p-4 text-muted-foreground truncate max-w-sm">{call.summary || "—"}</td>
+                      <td className="p-4 text-muted-foreground">{new Date(call.createdAt).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function InfoRow({ label, value, mono }: { label: string; value: string | null | undefined; mono?: boolean }) {
+  return (
+    <div className="flex items-baseline justify-between gap-4">
+      <dt className="text-muted-foreground shrink-0">{label}</dt>
+      <dd className={`text-foreground text-right ${mono ? "font-mono text-xs" : ""}`}>
+        {value || <span className="text-muted-foreground/40">—</span>}
+      </dd>
     </div>
   );
 }

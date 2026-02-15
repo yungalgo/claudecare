@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { serveStatic } from "hono/bun";
 import { env } from "./env.ts";
+import { auth } from "./lib/auth.ts";
 import { personRoutes } from "./routes/persons.ts";
 import { callRoutes } from "./routes/calls.ts";
 import { assessmentRoutes } from "./routes/assessments.ts";
@@ -14,6 +15,28 @@ import { handleWebSocket } from "./ws/handler.ts";
 const app = new Hono();
 
 app.use("/*", cors());
+
+// --- Auth routes (handled by better-auth) ---
+app.on(["GET", "POST"], "/api/auth/*", (c) => {
+  return auth.handler(c.req.raw);
+});
+
+// --- Session middleware (protect API routes) ---
+app.use("/api/*", async (c, next) => {
+  const path = c.req.path;
+  if (
+    path.startsWith("/api/auth/") ||
+    path.startsWith("/api/twilio/") ||
+    path === "/api/health"
+  ) {
+    return next();
+  }
+  const session = await auth.api.getSession({ headers: c.req.raw.headers });
+  if (!session) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+  return next();
+});
 
 // --- API routes ---
 app.route("/api/persons", personRoutes);
