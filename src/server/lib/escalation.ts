@@ -1,4 +1,7 @@
 import { db, schema } from "./db.ts";
+import { eq } from "drizzle-orm";
+import { env } from "../env.ts";
+import { sendEscalationAlert } from "./email.ts";
 
 interface CreateEscalationInput {
   personId: string;
@@ -23,10 +26,31 @@ export async function createEscalation(input: CreateEscalationInput) {
 
   console.log(`[escalation] Created ${input.tier} escalation for person ${input.personId}: ${input.reason}`);
 
-  // For immediate tier, log urgently
+  // Get the person's name for the email
+  const [person] = await db
+    .select({ name: schema.persons.name })
+    .from(schema.persons)
+    .where(eq(schema.persons.id, input.personId));
+
+  const personName = person?.name ?? "Unknown Person";
+
+  // Send email alerts for immediate and urgent escalations
+  if (input.tier === "immediate" || input.tier === "urgent") {
+    // Notify all registered users (care coordinators)
+    const users = await db.select({ email: schema.user.email }).from(schema.user);
+    const emails = users.map((u) => u.email);
+
+    await sendEscalationAlert(emails, {
+      personName,
+      tier: input.tier,
+      reason: input.reason,
+      details: input.details,
+      dashboardUrl: `${env.BASE_URL}/persons/${input.personId}`,
+    });
+  }
+
   if (input.tier === "immediate") {
-    console.error(`[IMMEDIATE ESCALATION] Person ${input.personId}: ${input.reason}`);
-    // TODO: Send SMS/email notification to emergency contacts
+    console.error(`[IMMEDIATE ESCALATION] ${personName}: ${input.reason}`);
   }
 
   return escalation;

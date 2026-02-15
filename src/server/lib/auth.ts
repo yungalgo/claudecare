@@ -3,6 +3,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "./db.ts";
 import { env } from "../env.ts";
 import * as schema from "./schema.ts";
+import { sendPasswordResetEmail } from "./email.ts";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -24,7 +25,7 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     async sendResetPassword({ user, url }) {
-      console.log(`[auth] Password reset for ${user.email}: ${url}`);
+      await sendPasswordResetEmail(user.email, url);
     },
   },
   session: {

@@ -9,6 +9,7 @@ const envSchema = z.object({
   TWILIO_AUTH_TOKEN: z.string(),
   TWILIO_PHONE_NUMBER: z.string(),
   ANTHROPIC_API_KEY: z.string(),
+  RESEND_API_KEY: z.string(),
 });
 
 function getEnv() {
@@ -25,6 +26,7 @@ function getEnv() {
       TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN ?? "",
       TWILIO_PHONE_NUMBER: process.env.TWILIO_PHONE_NUMBER ?? "",
       ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ?? "",
+      RESEND_API_KEY: process.env.RESEND_API_KEY ?? "",
     });
   }
   return result.data;
