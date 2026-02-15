@@ -1,0 +1,44 @@
+{
+  "name": "claudecare",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "bun run --watch src/server/index.ts",
+    "dev:vite": "vite dev --config vite.config.ts",
+    "build:client": "vite build --config vite.config.ts",
+    "build": "bun run build:client",
+    "start": "bun src/server/index.ts",
+    "db:push": "bunx drizzle-kit push",
+    "db:studio": "bunx drizzle-kit studio"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.18",
+    "@types/bun": "latest",
+    "@types/papaparse": "^5.5.2",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.4",
+    "drizzle-kit": "^0.31.9",
+    "tailwindcss": "^4.1.18",
+    "vite": "^7.3.1"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.74.0",
+    "better-auth": "^1.4.18",
+    "drizzle-orm": "^0.45.1",
+    "hono": "^4.11.9",
+    "papaparse": "^5.5.3",
+    "pg-boss": "^12.11.2",
+    "postgres": "^3.4.8",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-router": "^7.13.0",
+    "recharts": "^3.7.0",
+    "sonner": "^2.0.7",
+    "twilio": "^5.12.1",
+    "zod": "^4.3.6"
+  }
+}
