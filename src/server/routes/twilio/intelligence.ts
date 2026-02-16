@@ -17,14 +17,10 @@ twilioIntelligenceRoutes.post("/", async (c) => {
 
   console.log(`[twilio:intelligence] Webhook received: transcript=${transcriptSid} call=${callSid}`);
 
-  if (!transcriptSid) {
-    console.error("[twilio:intelligence] No TranscriptSid in webhook body");
-    return c.json({ error: "Missing TranscriptSid" }, 400);
-  }
-
-  if (!callSid) {
-    console.error("[twilio:intelligence] Missing CallSid in webhook body");
-    return c.json({ error: "Missing CallSid" }, 400);
+  // Twilio sends a test ping (empty body) when the webhook URL is updated — ack it gracefully
+  if (!transcriptSid || !callSid) {
+    console.log("[twilio:intelligence] Empty webhook (test ping or URL verification) — ignoring");
+    return c.json({ ok: true });
   }
 
   const [call] = await db
