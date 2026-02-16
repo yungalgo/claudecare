@@ -35,6 +35,7 @@
     "better-auth": "^1.4.18",
     "drizzle-orm": "^0.45.1",
     "hono": "^4.11.9",
+    "hono-rate-limiter": "^0.5.3",
     "papaparse": "^5.5.3",
     "pg-boss": "^12.11.2",
     "postgres": "^3.4.8",
