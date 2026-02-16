@@ -2,6 +2,7 @@ import { PgBoss } from "pg-boss";
 import { scheduleNextCall } from "./scheduler.ts";
 import { processCall } from "./call-processor.ts";
 import { processPostCall } from "./post-call.ts";
+import { env } from "../env.ts";
 
 let boss: PgBoss | null = null;
 

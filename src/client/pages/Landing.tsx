@@ -471,7 +471,7 @@ export function Landing() {
           </Link>
           <div className="flex items-center gap-5">
             <a
-              href="https://github.com/your-org/claudecare"
+              href="https://github.com/yungalgo/claudecare"
               target="_blank"
               rel="noopener noreferrer"
               className="text-muted-foreground hover:text-foreground transition-colors"
