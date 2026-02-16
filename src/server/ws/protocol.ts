@@ -1,6 +1,7 @@
-import { anthropic, CALL_SYSTEM_PROMPT, QUARTERLY_PROTOCOL_EXTENSION, ASSESSMENT_TOOL, QUARTERLY_ASSESSMENT_TOOL } from "../lib/claude.ts";
+import { anthropic, CALL_SYSTEM_PROMPT, COMPREHENSIVE_PROTOCOL_EXTENSION, ASSESSMENT_TOOL, COMPREHENSIVE_ASSESSMENT_TOOL, CHECK_IN_SYSTEM_PROMPT, CHECK_IN_TOOL } from "../lib/claude.ts";
 import { db, schema } from "../lib/db.ts";
 import { eq, and, sql, desc } from "drizzle-orm";
+import { CALL_TYPES, type CallType } from "../lib/constants.ts";
 
 // Haiku 4.5 for real-time conversation (low latency)
 // Opus 4.6 for everything else (accuracy)
@@ -8,16 +9,16 @@ const CONVERSATION_MODEL = "claude-haiku-4-5-20251001";
 const ASSESSMENT_MODEL = "claude-opus-4-6";
 
 // Phases match the system prompt structure
-type CallPhase = "opening" | "clova5" | "phq2" | "cssrs" | "needs" | "ottawa" | "quarterly" | "closing" | "assessment";
+type CallPhase = "opening" | "clova5" | "phq2" | "cssrs" | "needs" | "ottawa" | "comprehensive" | "closing" | "assessment";
 
 interface ConversationState {
   personId: string;
   callId: string;
   personName: string;
-  callType: "weekly" | "quarterly";
+  agentName: string;
+  callType: CallType;
   currentPhase: CallPhase;
   messages: Array<{ role: "user" | "assistant"; content: string }>;
-  // Cross-call memory context injected from previous calls
   memoryContext: string;
 }
 
@@ -28,13 +29,15 @@ export function createSession(
   personId: string,
   callId: string,
   personName: string,
-  callType: "weekly" | "quarterly",
+  agentName: string,
+  callType: CallType,
   memoryContext: string,
 ) {
   const state: ConversationState = {
     personId,
     callId,
     personName,
+    agentName,
     callType,
     currentPhase: "opening",
     messages: [],
@@ -138,19 +141,28 @@ export async function fetchMemoryContext(personId: string): Promise<string> {
 
 /** Build the full system prompt for a given conversation state. */
 function buildSystemPrompt(state: ConversationState, preamble: string): string {
-  let prompt = CALL_SYSTEM_PROMPT;
-
-  // Add quarterly instruments if this is a quarterly call
-  if (state.callType === "quarterly") {
-    prompt += QUARTERLY_PROTOCOL_EXTENSION;
+  // Check-in calls use a completely different prompt
+  if (state.callType === CALL_TYPES.CHECK_IN) {
+    let prompt = CHECK_IN_SYSTEM_PROMPT
+      .replace("{AGENT_NAME}", state.agentName)
+      .replace("{PERSON_NAME}", state.personName);
+    if (state.memoryContext) {
+      prompt += `\n\n## CONTEXT\n${state.memoryContext}`;
+    }
+    prompt += `\n\n${preamble}`;
+    return prompt;
   }
 
-  // Add cross-call memory if available
+  let prompt = CALL_SYSTEM_PROMPT.replace("{AGENT_NAME}", state.agentName);
+
+  if (state.callType === CALL_TYPES.COMPREHENSIVE) {
+    prompt += COMPREHENSIVE_PROTOCOL_EXTENSION;
+  }
+
   if (state.memoryContext) {
     prompt += `\n\n## PREVIOUS CALL CONTEXT\n${state.memoryContext}`;
   }
 
-  // Add phase tracking hint
   prompt += `\n\n## CURRENT STATE\nYou are calling ${state.personName}. Call type: ${state.callType}. Current phase: ${state.currentPhase}. ${preamble}`;
 
   return prompt;
@@ -177,12 +189,16 @@ export async function getGreeting(state: ConversationState): Promise<string> {
 export async function processUtterance(state: ConversationState, utterance: string): Promise<{ text: string; endCall: boolean }> {
   state.messages.push({ role: "user", content: utterance });
 
-  const tool = state.callType === "quarterly" ? QUARTERLY_ASSESSMENT_TOOL : ASSESSMENT_TOOL;
+  const isCheckIn = state.callType === CALL_TYPES.CHECK_IN;
+  const tool = isCheckIn ? CHECK_IN_TOOL : state.callType === CALL_TYPES.COMPREHENSIVE ? COMPREHENSIVE_ASSESSMENT_TOOL : ASSESSMENT_TOOL;
+  const preamble = isCheckIn
+    ? "Continue the friendly conversation. Keep responses concise — 2-3 sentences max per turn."
+    : "Continue the conversation naturally following the protocol phases. Keep responses concise — this is a phone call, not a letter. 2-3 sentences max per turn.";
 
   const response = await anthropic.messages.create({
     model: CONVERSATION_MODEL,
     max_tokens: 300,
-    system: buildSystemPrompt(state, "Continue the conversation naturally following the protocol phases. Keep responses concise — this is a phone call, not a letter. 2-3 sentences max per turn."),
+    system: buildSystemPrompt(state, preamble),
     messages: state.messages,
     tools: [tool],
   });
@@ -194,9 +210,17 @@ export async function processUtterance(state: ConversationState, utterance: stri
       text += block.text;
     } else if (block.type === "tool_use" && block.name === "submit_assessment") {
       // Haiku detected the conversation is complete — use Opus for the final assessment
+      // tool is guaranteed to be ASSESSMENT_TOOL or COMPREHENSIVE_ASSESSMENT_TOOL here
+      // (CHECK_IN_TOOL uses submit_checkin_summary, not submit_assessment)
       state.currentPhase = "assessment";
-      const assessmentInput = await getAccurateAssessment(state, tool);
+      const assessmentTool = tool as typeof ASSESSMENT_TOOL | typeof COMPREHENSIVE_ASSESSMENT_TOOL;
+      const assessmentInput = await getAccurateAssessment(state, assessmentTool);
       await handleAssessmentSubmission(state, assessmentInput);
+      endCall = true;
+    } else if (block.type === "tool_use" && block.name === "submit_checkin_summary") {
+      // Check-in call ending — save summary only (no clinical scores)
+      state.currentPhase = "closing";
+      await handleCheckInSubmission(state, block.input as Record<string, unknown>);
       endCall = true;
     }
   }
@@ -215,7 +239,7 @@ export async function processUtterance(state: ConversationState, utterance: stri
  */
 async function getAccurateAssessment(
   state: ConversationState,
-  tool: typeof ASSESSMENT_TOOL | typeof QUARTERLY_ASSESSMENT_TOOL,
+  tool: typeof ASSESSMENT_TOOL | typeof COMPREHENSIVE_ASSESSMENT_TOOL,
 ): Promise<Record<string, unknown>> {
   const response = await anthropic.messages.create({
     model: ASSESSMENT_MODEL,
@@ -251,10 +275,37 @@ function updatePhase(state: ConversationState, text: string) {
     state.currentPhase = "needs";
   } else if (state.currentPhase === "needs" && (lower.includes("day of the week") || lower.includes("today's date") || lower.includes("what year"))) {
     state.currentPhase = "ottawa";
-  } else if (state.currentPhase === "ottawa" && state.callType === "quarterly" && (lower.includes("orientation") || lower.includes("three words") || lower.includes("companionship") || lower.includes("daily activities"))) {
-    state.currentPhase = "quarterly";
-  } else if ((state.currentPhase === "ottawa" || state.currentPhase === "quarterly") && (lower.includes("anything else") || lower.includes("call again") || lower.includes("have a good"))) {
+  } else if (state.currentPhase === "ottawa" && state.callType === CALL_TYPES.COMPREHENSIVE && (lower.includes("orientation") || lower.includes("three words") || lower.includes("companionship") || lower.includes("daily activities"))) {
+    state.currentPhase = "comprehensive";
+  } else if ((state.currentPhase === "ottawa" || state.currentPhase === "comprehensive") && (lower.includes("anything else") || lower.includes("call again") || lower.includes("have a good"))) {
     state.currentPhase = "closing";
+  }
+}
+
+/** Save check-in summary (no clinical scores). */
+async function handleCheckInSubmission(state: ConversationState, input: Record<string, unknown>) {
+  console.log(`[protocol] Check-in summary for ${state.personName}:`, input);
+
+  await db
+    .update(schema.calls)
+    .set({ summary: input.summary as string })
+    .where(eq(schema.calls.id, state.callId));
+
+  await db
+    .update(schema.persons)
+    .set({ lastCallAt: new Date() })
+    .where(eq(schema.persons.id, state.personId));
+
+  // If concerns were noted, create a routine escalation
+  if (input.concerns_noted) {
+    const { createEscalation } = await import("../lib/escalation.ts");
+    await createEscalation({
+      personId: state.personId,
+      callId: state.callId,
+      tier: "routine",
+      reason: "Concern noted during inbound check-in call",
+      details: (input.concern_details as string) || (input.summary as string),
+    });
   }
 }
 
@@ -278,7 +329,7 @@ async function handleAssessmentSubmission(state: ConversationState, input: Recor
     phq2TriggeredCssrs: input.phq2_triggered_cssrs as boolean,
     cssrsResult: input.cssrs_result as string | undefined,
     ottawaScore: input.ottawa_score as number,
-    // Quarterly instruments (null if not collected)
+    // Comprehensive-only instruments (null if not collected)
     teleFreeCogScore: (input.tele_free_cog_score as number) ?? null,
     steadiScore: (input.steadi_score as number) ?? null,
     uclaLonelinessScore: (input.ucla_loneliness_score as number) ?? null,

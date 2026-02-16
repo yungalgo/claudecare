@@ -2,6 +2,7 @@ import type { ServerWebSocket } from "bun";
 import { createSession, getSession, deleteSession, saveTranscript, getGreeting, processUtterance, fetchMemoryContext } from "./protocol.ts";
 import { db, schema } from "../lib/db.ts";
 import { eq } from "drizzle-orm";
+import { CALL_TYPES, type CallType } from "../lib/constants.ts";
 
 // Twilio ConversationRelay WebSocket protocol
 // Messages from Twilio:
@@ -42,7 +43,7 @@ export const handleWebSocket = {
           // Look up person name and call type in parallel
           const [personResult, callResult, memoryContext] = await Promise.all([
             personId
-              ? db.select({ name: schema.persons.name }).from(schema.persons).where(eq(schema.persons.id, personId))
+              ? db.select({ name: schema.persons.name, agentName: schema.persons.agentName }).from(schema.persons).where(eq(schema.persons.id, personId))
               : Promise.resolve([]),
             callId
               ? db.select({ callType: schema.calls.callType }).from(schema.calls).where(eq(schema.calls.id, callId))
@@ -53,7 +54,8 @@ export const handleWebSocket = {
           ]);
 
           const personName = personResult[0]?.name ?? "there";
-          const callType = (callResult[0]?.callType as "weekly" | "quarterly") ?? "weekly";
+          const agentName = personResult[0]?.agentName ?? "Sarah";
+          const callType = (callResult[0]?.callType as CallType) ?? CALL_TYPES.STANDARD;
 
           // Update call record with Twilio SID if we have one
           if (callSid && callId) {
@@ -63,7 +65,7 @@ export const handleWebSocket = {
               .where(eq(schema.calls.id, callId));
           }
 
-          const session = createSession(callSid, personId, callId, personName, callType, memoryContext);
+          const session = createSession(callSid, personId, callId, personName, agentName, callType, memoryContext);
           const t0 = performance.now();
           const greeting = await getGreeting(session);
           const greetLatency = Math.round(performance.now() - t0);

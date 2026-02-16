@@ -66,6 +66,13 @@ export const persons = pgTable("persons", {
   pcpName: text("pcp_name"),
   pcpPhone: text("pcp_phone"),
   notes: text("notes"),
+  agentName: text("agent_name"), // Persistent AI caller name for this person
+  // Call schedule = how often to call (frequency). See constants.ts for intervals.
+  // twice-weekly: CLOVA CareCall protocol (high-risk, red-flagged, post-event) — 3 days
+  // weekly: Standard ongoing monitoring (most-studied frequency) — 7 days
+  // biweekly: Stable green-flagged persons — 14 days
+  // Call TYPE (standard/comprehensive/check-in) is determined per-call, not here.
+  callSchedule: text("call_schedule").default("weekly"),
   status: text("status").default("active"), // active, paused, discharged
   flag: text("flag").default("green"), // green, yellow, red
   lastCallAt: timestamp("last_call_at"),
@@ -77,9 +84,11 @@ export const persons = pgTable("persons", {
 export const calls = pgTable("calls", {
   id: uuid("id").defaultRandom().primaryKey(),
   personId: uuid("person_id").notNull().references(() => persons.id, { onDelete: "cascade" }),
-  callType: text("call_type").notNull().default("weekly"), // weekly, quarterly
+  callType: text("call_type").notNull().default("standard"), // standard, comprehensive, check-in
+  callSource: text("call_source").default("outbound"), // outbound, inbound
   callSid: text("call_sid"),
-  status: text("status").default("scheduled"), // scheduled, in-progress, completed, failed, no-answer
+  status: text("status").default("scheduled"), // scheduled, in-progress, completed, failed, no-answer, voicemail
+  retryCount: integer("retry_count").default(0),
   duration: integer("duration"),
   recordingUrl: text("recording_url"),
   enrichedTranscript: jsonb("enriched_transcript"),
@@ -108,7 +117,7 @@ export const assessments = pgTable("assessments", {
   cssrsResult: text("cssrs_result"),
   // Ottawa 3DY (0-4)
   ottawaScore: integer("ottawa_score"),
-  // Quarterly instruments
+  // Comprehensive-only instruments
   teleFreeCogScore: integer("tele_free_cog_score"),
   steadiScore: integer("steadi_score"),
   uclaLonelinessScore: integer("ucla_loneliness_score"),

@@ -80,7 +80,7 @@ export function scoreAssessment(a: AssessmentInput): ScoreResult {
   }
 
   // --- Ottawa 3DY Cognitive Quick-Check ---
-  // Score 0-4, any errors flag for quarterly comprehensive screen
+  // Score 0-4, any errors flag for comprehensive screen
   if (a.ottawaScore !== null && a.ottawaScore < 4) {
     if (a.ottawaScore <= 2) {
       flag = flag !== "red" ? "yellow" : flag;
@@ -93,7 +93,7 @@ export function scoreAssessment(a: AssessmentInput): ScoreResult {
       escalations.push({
         tier: "routine",
         reason: "Ottawa 3DY: Minor cognitive errors",
-        details: `Ottawa 3DY score: ${a.ottawaScore}/4. Flag for quarterly comprehensive screen.`,
+        details: `Ottawa 3DY score: ${a.ottawaScore}/4. Flag for comprehensive screen.`,
       });
     }
   }
@@ -118,7 +118,7 @@ export function scoreAssessment(a: AssessmentInput): ScoreResult {
     }
   }
 
-  // --- Quarterly: Tele-Free-Cog (0-24) ---
+  // --- Comprehensive: Tele-Free-Cog (0-24) ---
   if (a.teleFreeCogScore !== null) {
     if (a.teleFreeCogScore < 15) {
       flag = "red";
@@ -137,7 +137,7 @@ export function scoreAssessment(a: AssessmentInput): ScoreResult {
     }
   }
 
-  // --- Quarterly: STEADI Fall Risk (0-14) ---
+  // --- Comprehensive: STEADI Fall Risk (0-14) ---
   if (a.steadiScore !== null && a.steadiScore >= 4) {
     flag = flag === "green" ? "yellow" : flag;
     escalations.push({
@@ -147,7 +147,7 @@ export function scoreAssessment(a: AssessmentInput): ScoreResult {
     });
   }
 
-  // --- Quarterly: UCLA-3 Loneliness (3-9) ---
+  // --- Comprehensive: UCLA-3 Loneliness (3-9) ---
   if (a.uclaLonelinessScore !== null) {
     if (a.uclaLonelinessScore >= 7) {
       flag = flag === "green" ? "yellow" : flag;
@@ -165,7 +165,7 @@ export function scoreAssessment(a: AssessmentInput): ScoreResult {
     }
   }
 
-  // --- Quarterly: Lawton IADL (0-7) ---
+  // --- Comprehensive: Lawton IADL (0-7) ---
   if (a.lawtonIadlScore !== null && a.lawtonIadlScore <= 5) {
     flag = flag === "green" ? "yellow" : flag;
     escalations.push({

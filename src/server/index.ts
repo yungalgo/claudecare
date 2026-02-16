@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { serveStatic } from "hono/bun";
+import { rateLimiter } from "hono-rate-limiter";
 import { env } from "./env.ts";
 import { auth } from "./lib/auth.ts";
 import { personRoutes } from "./routes/persons.ts";
@@ -16,18 +17,37 @@ import { handleWebSocket } from "./ws/handler.ts";
 import { consumeWsToken } from "./lib/twilio.ts";
 import type { AppVariables } from "./types.ts";
 
+const isLocal = env.BASE_URL.includes("localhost") || env.BASE_URL.includes("127.0.0.1");
+
 const app = new Hono<{ Variables: AppVariables }>();
 
+// --- CORS (localhost origins only in dev) ---
+const allowedOrigins = [env.BASE_URL];
+if (isLocal) {
+  allowedOrigins.push("http://localhost:3000", "http://localhost:5173");
+}
+app.use("/*", cors({ origin: allowedOrigins, credentials: true }));
+
+// --- Rate limiting ---
+// General API: 120 requests/min per IP (generous for normal UI use)
 app.use(
-  "/*",
-  cors({
-    origin: [
-      env.BASE_URL,
-      // Always allow localhost in dev (BASE_URL may be ngrok)
-      "http://localhost:3000",
-      "http://localhost:5173",
-    ],
-    credentials: true,
+  "/api/*",
+  rateLimiter({
+    windowMs: 60_000,
+    limit: 120,
+    keyGenerator: (c) => c.req.header("x-forwarded-for") ?? "global",
+    skip: (c) => c.req.path.startsWith("/api/twilio/"), // Twilio webhooks are signature-validated
+  }),
+);
+
+// Call trigger: 5 calls/min per IP (each costs Twilio + Anthropic credits)
+app.use(
+  "/api/calls/trigger",
+  rateLimiter({
+    windowMs: 60_000,
+    limit: 5,
+    keyGenerator: (c) => `trigger:${c.req.header("x-forwarded-for") ?? "anonymous"}`,
+    message: { error: "Rate limit exceeded — max 5 calls per minute" },
   }),
 );
 
@@ -72,8 +92,9 @@ app.get("/api/health", (c) => c.json({ ok: true, name: "claudecare" }));
 
 // --- Dev-only: trigger call (localhost only, requires auth + userId scoping) ---
 app.post("/api/dev/trigger-call", async (c) => {
-  const host = c.req.header("host") ?? "";
-  if (!host.includes("localhost")) {
+  // Only accessible from localhost — check request URL, not user-controlled Host header
+  const reqHostname = new URL(c.req.url).hostname;
+  if (reqHostname !== "localhost" && reqHostname !== "127.0.0.1") {
     return c.json({ error: "Dev endpoint only available on localhost" }, 403);
   }
   // Require auth even in dev mode to enforce multi-tenancy
@@ -83,6 +104,7 @@ app.post("/api/dev/trigger-call", async (c) => {
   }
   const userId = session.user.id;
   const { personId, callType } = await c.req.json();
+  const { CALL_TYPES } = await import("./lib/constants.ts");
   const { db, schema } = await import("./lib/db.ts");
   const { eq, and } = await import("drizzle-orm");
   const { initiateCall } = await import("./lib/twilio.ts");
@@ -92,13 +114,12 @@ app.post("/api/dev/trigger-call", async (c) => {
   if (!person) return c.json({ error: "Person not found" }, 404);
   const [call] = await db.insert(schema.calls).values({
     personId,
-    callType: callType ?? "weekly",
+    callType: callType ?? CALL_TYPES.STANDARD,
     status: "scheduled",
     scheduledFor: new Date(),
   }).returning();
   // Call Twilio directly (skip pg-boss queue for dev)
-  console.log(`[dev] Triggering ${callType ?? "weekly"} call ${call!.id} for ${person.name} (${person.phone})`);
-  console.log(`[dev] BASE_URL=${env.BASE_URL}`);
+  console.log(`[dev] Triggering ${callType ?? CALL_TYPES.STANDARD} call ${call!.id} for ${person.name} (${person.phone})`);
   await initiateCall(call!.id, person.id, person.phone);
   return c.json(call, 201);
 });

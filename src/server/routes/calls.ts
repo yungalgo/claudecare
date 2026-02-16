@@ -1,8 +1,10 @@
 import { Hono } from "hono";
+import { z } from "zod/v4";
 import { db, schema } from "../lib/db.ts";
 import { eq, desc, and } from "drizzle-orm";
 import { getBoss } from "../jobs/boss.ts";
 import { env } from "../env.ts";
+import { CALL_TYPES } from "../lib/constants.ts";
 import type { AppVariables } from "../types.ts";
 
 export const callRoutes = new Hono<{ Variables: AppVariables }>();
@@ -98,9 +100,18 @@ callRoutes.get("/:id/recording", async (c) => {
 });
 
 // Trigger manual call for a person — ownership check
+const triggerSchema = z.object({
+  personId: z.uuid(),
+  callType: z.enum([CALL_TYPES.STANDARD, CALL_TYPES.COMPREHENSIVE]).optional(),
+});
+
 callRoutes.post("/trigger", async (c) => {
   const userId = c.get("userId");
-  const { personId, callType } = await c.req.json();
+  const parsed = triggerSchema.safeParse(await c.req.json());
+  if (!parsed.success) {
+    return c.json({ error: "Invalid input", details: parsed.error.issues }, 400);
+  }
+  const { personId, callType } = parsed.data;
 
   if (!(await verifyPersonOwnership(personId, userId))) {
     return c.json({ error: "Person not found" }, 404);
@@ -111,7 +122,7 @@ callRoutes.post("/trigger", async (c) => {
     .insert(schema.calls)
     .values({
       personId,
-      callType: callType ?? "weekly",
+      callType: callType ?? CALL_TYPES.STANDARD,
       status: "scheduled",
       scheduledFor: new Date(),
     })

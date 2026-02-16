@@ -1,5 +1,5 @@
 import { db, schema } from "../lib/db.ts";
-import { eq } from "drizzle-orm";
+import { eq, and, gte, sql } from "drizzle-orm";
 import { scoreAssessment } from "../lib/scoring.ts";
 import { createEscalation } from "../lib/escalation.ts";
 import { env } from "../env.ts";
@@ -60,6 +60,38 @@ export async function processPostCall(callId: string) {
   }
 
   console.log(`[post-call] Call ${callId}: flag=${result.flag}, escalations=${result.escalations.length}`);
+
+  // Check for frequent inbound calls (possible loneliness signal)
+  if (call.callSource === "inbound") {
+    await checkFrequentInbound(call.personId);
+  }
+}
+
+/** Flag persons who make 3+ inbound calls in 14 days — potential loneliness signal */
+async function checkFrequentInbound(personId: string) {
+  const fourteenDaysAgo = new Date();
+  fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+
+  const [result] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(schema.calls)
+    .where(
+      and(
+        eq(schema.calls.personId, personId),
+        eq(schema.calls.callSource, "inbound"),
+        gte(schema.calls.createdAt, fourteenDaysAgo),
+      ),
+    );
+
+  const count = result?.count ?? 0;
+  if (count >= 3) {
+    await createEscalation({
+      personId,
+      tier: "routine",
+      reason: "Frequent inbound calls — possible loneliness or unmet need",
+      details: `${count} inbound calls in the last 14 days. This pattern may indicate social isolation or unmet needs. Consider increasing call frequency or social services referral.`,
+    });
+  }
 }
 
 /**

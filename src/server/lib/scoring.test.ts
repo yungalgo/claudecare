@@ -109,7 +109,7 @@ describe("scoreAssessment", () => {
     expect(result.escalations).toHaveLength(0);
   });
 
-  test("Ottawa score 3 → routine escalation (flag for quarterly)", () => {
+  test("Ottawa score 3 → routine escalation (flag for comprehensive)", () => {
     const result = scoreAssessment({ ...greenBaseline(), ottawaScore: 3 });
     expect(result.escalations).toHaveLength(1);
     expect(result.escalations[0]!.tier).toBe("routine");
@@ -159,7 +159,7 @@ describe("scoreAssessment", () => {
     expect(result.escalations.every((e) => e.tier === "routine")).toBe(true);
   });
 
-  // --- Quarterly: Tele-Free-Cog ---
+  // --- Comprehensive: Tele-Free-Cog ---
 
   test("Tele-Free-Cog < 15 → red flag, urgent escalation (possible dementia)", () => {
     const result = scoreAssessment({ ...greenBaseline(), teleFreeCogScore: 12 });
@@ -182,7 +182,7 @@ describe("scoreAssessment", () => {
     expect(result.escalations).toHaveLength(0);
   });
 
-  // --- Quarterly: STEADI ---
+  // --- Comprehensive: STEADI ---
 
   test("STEADI ≥ 4 → yellow flag, routine escalation", () => {
     const result = scoreAssessment({ ...greenBaseline(), steadiScore: 5 });
@@ -196,7 +196,7 @@ describe("scoreAssessment", () => {
     expect(result.escalations).toHaveLength(0);
   });
 
-  // --- Quarterly: UCLA-3 ---
+  // --- Comprehensive: UCLA-3 ---
 
   test("UCLA-3 ≥ 7 → yellow flag, routine escalation (high isolation)", () => {
     const result = scoreAssessment({ ...greenBaseline(), uclaLonelinessScore: 8 });
@@ -216,7 +216,7 @@ describe("scoreAssessment", () => {
     expect(result.escalations).toHaveLength(0);
   });
 
-  // --- Quarterly: Lawton IADL ---
+  // --- Comprehensive: Lawton IADL ---
 
   test("Lawton IADL ≤ 5 → yellow flag, routine escalation", () => {
     const result = scoreAssessment({ ...greenBaseline(), lawtonIadlScore: 4 });

@@ -3,10 +3,10 @@ import { env } from "../env.ts";
 
 export const anthropic = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
 
-// Additional protocol for quarterly calls — appended to system prompt when callType is "quarterly"
-export const QUARTERLY_PROTOCOL_EXTENSION = `
+// Additional protocol for comprehensive calls — appended to system prompt when callType is "comprehensive"
+export const COMPREHENSIVE_PROTOCOL_EXTENSION = `
 
-## QUARTERLY INSTRUMENTS (Additional — this is a quarterly call)
+## COMPREHENSIVE INSTRUMENTS (Additional — this is a comprehensive assessment call)
 
 After Phase 5 (Ottawa 3DY) and before Phase 6 (Close), administer these four additional instruments. This will extend the call to approximately 12-15 minutes.
 
@@ -56,11 +56,12 @@ Score 1 point for each activity the person can do INDEPENDENTLY:
 7. Using transportation
 `;
 
-export const CALL_SYSTEM_PROMPT = `You are a warm, patient, and empathetic AI wellness check-in caller for claudecare, a program that supports isolated seniors through regular phone calls. Your name is "claudecare." You speak clearly and at a moderate pace, using simple language appropriate for elderly adults.
+// Agent name placeholder — replaced at runtime with the person's assigned agent name
+export const CALL_SYSTEM_PROMPT = `You are a warm, patient, and empathetic AI wellness check-in caller for ClaudeCare, a program that supports isolated seniors through regular phone calls. Your name is "{AGENT_NAME}." You speak clearly and at a moderate pace, using simple language appropriate for elderly adults.
 
 ## CALL STRUCTURE
 
-Follow this exact protocol for each weekly check-in call (5-8 minutes total):
+Follow this exact protocol for each check-in call (5-8 minutes total):
 
 ### Phase 1 — Opening & Wellness Check (30-60 seconds)
 Greet the person by name warmly. Ask how they're doing today. Listen for speech coherence, response time, and emotional tone.
@@ -147,7 +148,7 @@ After the call, you MUST call the "submit_assessment" tool with all collected sc
 5. If someone doesn't want to answer a question, note it and move on gracefully.
 6. Always maintain a warm, caring tone throughout the entire call.`;
 
-// Weekly assessment tool — collects core screening instruments
+// Standard assessment tool — collects core screening instruments
 export const ASSESSMENT_TOOL = {
   name: "submit_assessment",
   description: "Submit the assessment scores collected during the call. Call this at the end of every call.",
@@ -169,10 +170,10 @@ export const ASSESSMENT_TOOL = {
   },
 };
 
-// Quarterly assessment tool — includes additional instruments
-export const QUARTERLY_ASSESSMENT_TOOL = {
+// Comprehensive assessment tool — includes additional instruments
+export const COMPREHENSIVE_ASSESSMENT_TOOL = {
   name: "submit_assessment",
-  description: "Submit the assessment scores collected during the quarterly call. Call this at the end of every call.",
+  description: "Submit the assessment scores collected during the comprehensive call. Call this at the end of every call.",
   input_schema: {
     type: "object" as const,
     properties: {
@@ -192,5 +193,35 @@ export const QUARTERLY_ASSESSMENT_TOOL = {
       summary: { type: "string", description: "Brief narrative summary of the call (2-3 sentences)" },
     },
     required: ["meals", "sleep", "health", "social", "mobility", "phq2_score", "phq2_triggered_cssrs", "ottawa_score", "tele_free_cog_score", "steadi_score", "ucla_loneliness_score", "lawton_iadl_score", "summary"],
+  },
+};
+
+// Check-in prompt for inbound calls when person is not due for a wellness check
+export const CHECK_IN_SYSTEM_PROMPT = `You are {AGENT_NAME}, a friendly wellness companion from ClaudeCare. {PERSON_NAME} has called you — they're not due for a formal wellness check, so they may just want someone to talk to.
+
+Be warm, friendly, and present. Listen actively. Ask open-ended questions about their day, their interests, how they're feeling. If they mention anything concerning (health issues, falls, loneliness, mood changes, not eating, feeling unsafe), note it carefully.
+
+Do NOT run the formal screening protocol. This is a casual, supportive conversation.
+
+At the end of the call (after 5-10 minutes or when they're ready to go), submit a brief summary via the submit_checkin_summary tool.
+
+## IMPORTANT RULES
+1. Never diagnose or prescribe.
+2. If someone mentions immediate danger or suicidal thoughts, tell them: "I want to make sure you get the support you need. The 988 Suicide & Crisis Lifeline is available 24/7."
+3. Be patient — allow extra time for responses.
+4. Always maintain a warm, caring tone.`;
+
+// Simplified tool for check-in calls (no clinical scores)
+export const CHECK_IN_TOOL = {
+  name: "submit_checkin_summary",
+  description: "Submit a brief summary of the check-in conversation. Call this when the conversation is wrapping up.",
+  input_schema: {
+    type: "object" as const,
+    properties: {
+      summary: { type: "string", description: "Brief narrative summary of the conversation (2-3 sentences). Note any concerns mentioned." },
+      concerns_noted: { type: "boolean", description: "Whether the person mentioned any health, safety, or wellbeing concerns" },
+      concern_details: { type: "string", description: "If concerns were noted, describe them briefly" },
+    },
+    required: ["summary", "concerns_noted"],
   },
 };

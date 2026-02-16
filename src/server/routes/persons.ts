@@ -6,6 +6,17 @@ import type { AppVariables } from "../types.ts";
 
 export const personRoutes = new Hono<{ Variables: AppVariables }>();
 
+// Warm, friendly names for the AI caller — assigned consistently per person
+const AGENT_NAMES = [
+  "Sarah", "Eleanor", "Dorothy", "Helen", "Ruth",
+  "Betty", "Patricia", "Linda", "Barbara", "Margaret",
+  "Virginia", "Catherine", "Frances", "Alice", "Jean",
+];
+
+function pickAgentName(): string {
+  return AGENT_NAMES[Math.floor(Math.random() * AGENT_NAMES.length)]!;
+}
+
 // List all persons (with optional search) — scoped to user
 personRoutes.get("/", async (c) => {
   const userId = c.get("userId");
@@ -63,7 +74,7 @@ personRoutes.post("/", async (c) => {
   const userId = c.get("userId");
   const body = await c.req.json();
   const data = createPersonSchema.parse(body);
-  const [person] = await db.insert(schema.persons).values({ ...data, userId }).returning();
+  const [person] = await db.insert(schema.persons).values({ ...data, userId, agentName: pickAgentName() }).returning();
   return c.json(person, 201);
 });
 
@@ -97,7 +108,7 @@ personRoutes.post("/upload", async (c) => {
   const userId = c.get("userId");
   const body = await c.req.json();
   const rows = z.array(createPersonSchema).parse(body.rows);
-  const values = rows.map((r) => ({ ...r, userId }));
+  const values = rows.map((r) => ({ ...r, userId, agentName: pickAgentName() }));
   const inserted = await db.insert(schema.persons).values(values).returning();
   return c.json({ count: inserted.length, persons: inserted }, 201);
 });
