@@ -86,8 +86,6 @@ export async function initiateCall(callId: string, personId: string, phone: stri
       statusCallbackEvent: ["initiated", "ringing", "answered", "completed"],
       record: true,
       recordingStatusCallback: recordingUrl,
-      machineDetection: "DetectMessageEnd",
-      machineDetectionTimeout: 5,
     });
 
     // Update call record with Twilio SID
