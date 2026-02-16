@@ -28,21 +28,44 @@ Run both `bun run dev` and `bun run dev:vite` simultaneously during development.
 
 ## Architecture
 
-Single Bun process serving HTTP (Hono), WebSocket (Twilio ConversationRelay), and background jobs (pg-boss) — no separate worker processes.
+Single Bun process serving HTTP (Hono), WebSocket (Twilio ConversationRelay), and background jobs (pg-boss) — no separate worker processes. Multi-tenant: all data scoped by `userId`.
 
-**Call flow:** pg-boss cron (daily 9 AM) → finds active persons with no call in 7+ days → queues `process-call` job → Twilio initiates call → Twilio connects WebSocket to `/ws/conversation-relay` → Claude Opus 4.6 runs 6-phase conversation protocol (greeting → CLOVA 5 → PHQ-2 → C-SSRS if triggered → needs/Ottawa 3DY → close) → Claude submits assessment via tool_use → `post-call` job scores it → updates person flag (green/yellow/red) → creates escalations if needed.
+**Call flow (sequential):** pg-boss cron at `CALL_WINDOW_START` fires `schedule-calls` → `scheduleNextCall()` finds next active person due (no call in 7+ days) → creates call record → queues `process-call` → Twilio initiates call with WS token → Twilio connects WebSocket to `/ws/conversation-relay` (token-authenticated) → Claude Opus 4.6 runs 6-phase conversation protocol → Claude submits assessment via tool_use → protocol saves assessment + transcript → Twilio status webhook fires `post-call` job → scoring pipeline runs → updates person flag → creates escalations → chains `process-next-call` after `CALL_GAP_SECONDS` delay → loop continues until `CALL_WINDOW_END`.
 
 **Scoring pipeline** (`src/server/lib/scoring.ts`): C-SSRS result (highest priority) → PHQ-2 (≥3 triggers escalation) → Ottawa 3DY → CLOVA 5 individual metrics (any ≤2 flags) → quarterly instruments. Returns a flag and array of escalation objects.
 
 ## Key Paths
 
-- **Server entry:** `src/server/index.ts` — Bun.serve with HTTP + WebSocket
-- **DB schema:** `src/server/lib/schema.ts` — 4 tables: persons, calls, assessments, escalations
+- **Server entry:** `src/server/index.ts` — Bun.serve with HTTP + WebSocket (token-auth on upgrade)
+- **DB schema:** `src/server/lib/schema.ts` — 4 app tables (persons, calls, assessments, escalations) + better-auth tables
+- **Types:** `src/server/types.ts` — shared Hono `AppVariables` type (userId, userEmail)
 - **Claude integration:** `src/server/lib/claude.ts` — system prompt, assessment tool definition
+- **Twilio integration:** `src/server/lib/twilio.ts` — call initiation, WS token system, signature validation middleware
 - **WS protocol:** `src/server/ws/protocol.ts` — conversation state, Claude message history, tool_use handling
-- **Jobs:** `src/server/jobs/` — boss.ts (init), scheduler.ts (cron), call-processor.ts, post-call.ts
-- **API routes:** `src/server/routes/` — persons, calls, assessments, escalations, twilio webhooks
-- **Client pages:** `src/client/pages/` — Dashboard, Person, Calls, Escalations, Upload
+- **WS handler:** `src/server/ws/handler.ts` — setup/prompt/interrupt/dtmf handlers, uses `ws.data` from token
+- **Jobs:** `src/server/jobs/` — boss.ts (init + workers), scheduler.ts (sequential), call-processor.ts, post-call.ts
+- **API routes:** `src/server/routes/` — persons, calls, assessments, escalations, analytics, twilio webhooks
+- **Client pages:** `src/client/pages/` — Dashboard, Person, Calls, Escalations, Analytics, Upload
+
+## Environment Variables
+
+All required — server crashes on startup if any are missing or empty:
+
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `BETTER_AUTH_SECRET` | Session signing secret |
+| `TWILIO_ACCOUNT_SID` | Twilio account SID |
+| `TWILIO_AUTH_TOKEN` | Twilio auth token (also used for signature validation) |
+| `TWILIO_PHONE_NUMBER` | Twilio phone number to call from |
+| `ANTHROPIC_API_KEY` | Anthropic API key for Claude |
+| `RESEND_API_KEY` | Resend API key for emails |
+| `BASE_URL` | Public URL of the server (default: `http://localhost:3000`) |
+| `PORT` | Server port (default: `3000`) |
+| `CALL_WINDOW_START` | Daily call window start time (default: `09:00`) |
+| `CALL_WINDOW_END` | Daily call window end time (default: `17:00`) |
+| `CALL_WINDOW_TZ` | Timezone for call window (default: `America/New_York`) |
+| `CALL_GAP_SECONDS` | Delay between sequential calls (default: `10`) |
 
 ## Tech Stack
 
@@ -59,9 +82,13 @@ Single Bun process serving HTTP (Hono), WebSocket (Twilio ConversationRelay), an
 
 - Path alias `~/` maps to `src/` (configured in both tsconfig and vite)
 - Drizzle uses `casing: "snake_case"` — define schema in camelCase, DB columns auto-snake
-- Server env vars validated via zod in `src/server/env.ts` with dev defaults
+- Server env vars validated via zod in `src/server/env.ts` — crashes on missing vars (no fallbacks)
+- All API routes scoped by `userId` from session (set in middleware)
+- Twilio webhooks validated via `x-twilio-signature` middleware
+- WebSocket connections require single-use token (5-min TTL) generated at call initiation
 - API client wrapper in `src/client/lib/api.ts` — all fetch calls go through this
 - UI components are custom (not shadcn) in `src/client/components/ui.tsx`
+- CORS restricted to `BASE_URL` + localhost:5173 (dev)
 
 ## Reference Code
 

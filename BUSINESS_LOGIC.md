@@ -224,8 +224,8 @@ A person's flag is the **worst flag from their most recent assessment**. It upda
 | Trigger | Recipients | Content |
 |---------|-----------|---------|
 | Password reset request | The requesting user | Reset link (expires 1 hour) |
-| Immediate escalation | All registered users | Person name, reason, details, dashboard link, 988 hotline note |
-| Urgent escalation | All registered users | Person name, reason, details, dashboard link |
+| Immediate escalation | Owning user only | Person name, reason, details, dashboard link, 988 hotline note |
+| Urgent escalation | Owning user only | Person name, reason, details, dashboard link |
 
 ---
 
@@ -235,13 +235,19 @@ A person's flag is the **worst flag from their most recent assessment**. It upda
 - **Sessions**: Cookie-based, 5-minute server-side cache
 - **Protected routes**: All `/api/*` except `/api/auth/*`, `/api/twilio/*`, `/api/health`
 - **Password reset**: Generates token → sends email via Resend → user sets new password
-- **Authorization**: Currently single-tenant (all users see all persons). Multi-tenancy is a future enhancement.
+- **Authorization**: Multi-tenant — each user only sees their own persons, calls, assessments, and escalations. All API routes scoped by `userId` from session.
+- **WebSocket auth**: Token-based. Call initiation generates a single-use token (5-min TTL). WS upgrade verifies and consumes the token.
+- **Twilio webhook auth**: All Twilio webhooks validated via `x-twilio-signature` header.
 
 ---
 
-## Scheduling
+## Scheduling (Sequential Call Processing)
 
-- **Daily 9 AM cron** (pg-boss): Finds all active persons whose `last_call_at` is null or > 7 days ago
-- Creates a call record for each, queues a `process-call` job
-- Calls are staggered by pg-boss's built-in queue processing
+- **Daily cron** at `CALL_WINDOW_START` (pg-boss): Fires `schedule-calls` job
+- `scheduleNextCall()` checks current time against `CALL_WINDOW_END` in `CALL_WINDOW_TZ`
+- Finds next active person due (no call in 7+ days), ordered by `last_call_at ASC`
+- Creates call record, queues `process-call`
+- After call completes: Twilio status webhook queues `post-call` job
+- `post-call` runs scoring pipeline, then queues `process-next-call` with `CALL_GAP_SECONDS` delay
+- `process-next-call` calls `scheduleNextCall()` again → sequential chain until window closes
 - Manual calls can be triggered anytime from the person detail page
