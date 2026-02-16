@@ -324,49 +324,94 @@ export function Landing() {
         </div>
       </section>
 
-      {/* Features Grid */}
-      <section className="py-20 sm:py-28 bg-card border-y border-border">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Platform Features — What the Dashboard Does */}
+      <section className="py-20 sm:py-28 bg-card border-y border-border relative overflow-hidden">
+        <div className="absolute top-20 left-0 w-[400px] h-[400px] rounded-full bg-secondary/3 blur-3xl" />
+
+        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <p className="text-sm font-semibold text-secondary uppercase tracking-widest mb-3">Platform Features</p>
+            <p className="text-sm font-semibold text-secondary uppercase tracking-widest mb-3">The Platform</p>
             <h2 className="font-display text-3xl sm:text-4xl font-semibold text-foreground">
-              Clinical-Grade Assessments, <span className="text-primary">Delivered at Scale</span>
+              Everything care teams need, <span className="text-gradient">in one dashboard.</span>
             </h2>
-            <p className="text-muted-foreground mt-4 max-w-xl mx-auto text-lg">
-              Every call runs validated screening instruments through natural conversation.
+            <p className="text-muted-foreground mt-4 max-w-2xl mx-auto text-lg leading-relaxed">
+              From uploading your first client to resolving an escalation — every workflow is designed
+              for care coordinators who don't have time to learn new software.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 stagger-in">
+          {/* Big feature cards — 2 col */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 stagger-reveal">
+            <div className="rounded-xl border border-border bg-background p-8 transition-all duration-300 hover:shadow-warm-lg hover:-translate-y-0.5 group">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-5 transition-colors group-hover:bg-primary group-hover:text-white">
+                <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z" />
+                </svg>
+              </div>
+              <h3 className="font-display text-xl font-semibold text-foreground mb-2">Try It From the Dashboard</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+                Enter any US/Canada phone number and receive a live wellness check-in call within seconds.
+                Experience the full 6-phase protocol, hear the AI adapt to your responses, and see the
+                structured assessment appear in your dashboard when the call ends.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-primary-light text-primary">Live Demo</span>
+                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-primary-light text-primary">Standard or Comprehensive</span>
+                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-primary-light text-primary">Real-time Status</span>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-border bg-background p-8 transition-all duration-300 hover:shadow-warm-lg hover:-translate-y-0.5 group">
+              <div className="w-12 h-12 rounded-xl bg-secondary/10 text-secondary flex items-center justify-center mb-5 transition-colors group-hover:bg-secondary group-hover:text-white">
+                <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" />
+                </svg>
+              </div>
+              <h3 className="font-display text-xl font-semibold text-foreground mb-2">Word-Level Call Transcription</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+                Every call is recorded and transcribed with word-level timestamps via Twilio Intelligence.
+                Speaker diarization separates the AI caller from the person. AI-generated clinical summaries
+                distill each call into 2-3 actionable sentences.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-secondary-light text-secondary">Audio Playback</span>
+                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-secondary-light text-secondary">Speaker Diarization</span>
+                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-secondary-light text-secondary">AI Summaries</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Smaller feature cards — 3 col */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 stagger-reveal">
             <FeatureCard
-              icon={<HeartPulseIcon />}
-              title="CLOVA-5 Health Metrics"
-              description="Five core domains scored every call: nutrition, sleep, subjective health, social activity, and physical mobility. 1-5 scale with longitudinal tracking."
-            />
-            <FeatureCard
-              icon={<ShieldAlertIcon />}
-              title="Depression & Suicide Screening"
-              description="PHQ-2 depression screener with automatic C-SSRS escalation when scores indicate risk. FDA-endorsed gold standard protocol."
-            />
-            <FeatureCard
-              icon={<BrainCogIcon />}
-              title="Cognitive Assessment"
-              description="Ottawa 3DY orientation screen integrated naturally into conversation. Tele-Free-Cog for quarterly deep cognitive evaluation."
-            />
-            <FeatureCard
-              icon={<AlertTiersIcon />}
-              title="Three-Tier Escalation"
-              description="Immediate, urgent, and routine tiers with automated email alerts to care coordinators. One-click acknowledgment and resolution tracking."
+              icon={<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>}
+              title="CSV Bulk Upload"
+              description="Upload your entire client roster in one click. CSV parsing with preview, validation, and automatic agent name assignment."
             />
             <FeatureCard
               icon={<TrendUpIcon />}
-              title="Longitudinal Trend Tracking"
-              description="Track assessment scores over weeks and months. Spot gradual cognitive or functional decline before it becomes a crisis."
+              title="Analytics & Trends"
+              description="Recharts-powered dashboards: call volume over time, flag distribution, average CLOVA-5 scores, per-person trend lines."
             />
             <FeatureCard
-              icon={<TranscriptDocIcon />}
-              title="Call Transcripts & Recordings"
-              description="Full transcripts, AI-generated clinical summaries, and audio playback for every call. Complete audit trail for compliance."
+              icon={<AlertTiersIcon />}
+              title="Escalation Management"
+              description="Filter by tier and status. One-click acknowledge and resolve. Automated email alerts for immediate and urgent tiers."
+            />
+            <FeatureCard
+              icon={<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /><circle cx="12" cy="7" r="4" /><line x1="12" y1="11" x2="12" y2="17" /><line x1="9" y1="14" x2="15" y2="14" /></svg>}
+              title="Personalized AI Callers"
+              description="Each person gets a consistent AI name (Sarah, Eleanor, Dorothy...) that stays the same across calls, building familiarity and trust."
+            />
+            <FeatureCard
+              icon={<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3" /><path d="M15 2h6v6" /><path d="M21 2l-7 7" /></svg>}
+              title="Inbound Call Recognition"
+              description="When enrolled persons call in, the system recognizes them by phone number. Due for a check-in? Full protocol runs. Just lonely? Casual companionship mode."
+            />
+            <FeatureCard
+              icon={<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>}
+              title="Smart Retry & Voicemail"
+              description="Answering machine detection leaves a friendly voicemail requesting callback. Up to 2 retries with 15-min intervals. 3+ consecutive misses trigger escalation."
             />
           </div>
         </div>

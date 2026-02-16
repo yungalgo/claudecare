@@ -104,6 +104,77 @@ h1, h2, h3, h4, h5, h6 {
   z-index: 0;
 }
 
+/* Scroll-triggered reveal animation */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.reveal {
+  animation: slideUp 0.6s ease-out both;
+}
+
+.reveal-scale {
+  animation: scaleIn 0.5s ease-out both;
+}
+
+.reveal-left {
+  animation: slideInLeft 0.6s ease-out both;
+}
+
+.reveal-right {
+  animation: slideInRight 0.6s ease-out both;
+}
+
+/* Stagger delays for reveal children */
+.stagger-reveal > * { animation: slideUp 0.5s ease-out both; }
+.stagger-reveal > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-reveal > *:nth-child(2) { animation-delay: 80ms; }
+.stagger-reveal > *:nth-child(3) { animation-delay: 160ms; }
+.stagger-reveal > *:nth-child(4) { animation-delay: 240ms; }
+.stagger-reveal > *:nth-child(5) { animation-delay: 320ms; }
+.stagger-reveal > *:nth-child(6) { animation-delay: 400ms; }
+.stagger-reveal > *:nth-child(7) { animation-delay: 480ms; }
+.stagger-reveal > *:nth-child(8) { animation-delay: 560ms; }
+
+/* Floating animation for decorative elements */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-float-delayed {
+  animation: float 6s ease-in-out infinite;
+  animation-delay: 2s;
+}
+
+/* Gradient text */
+.text-gradient {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
 /* Custom focus ring */
 :focus-visible {
   outline: 2px solid var(--color-primary);

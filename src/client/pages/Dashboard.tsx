@@ -16,9 +16,17 @@ interface PersonRow {
 
 type DemoCallStatus = "idle" | "creating" | "dialing" | "in-progress" | "completed" | "failed";
 
+/** Normalize a phone input to E.164 format (+1XXXXXXXXXX) for US/Canada. Returns null if invalid. */
+function normalizePhone(raw: string): string | null {
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
+  return null;
+}
+
 function DemoCallCard({ onCallComplete }: { onCallComplete: () => void }) {
   const [phone, setPhone] = useState("");
-  const [callType, setCallType] = useState<"weekly" | "quarterly">("weekly");
+  const [callType, setCallType] = useState<"standard" | "comprehensive">("standard");
   const [status, setStatus] = useState<DemoCallStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -34,8 +42,13 @@ function DemoCallCard({ onCallComplete }: { onCallComplete: () => void }) {
     return cleanup;
   }, [cleanup]);
 
+  const normalized = normalizePhone(phone);
+  const phoneError = phone.trim().length > 0 && !normalized
+    ? "Enter a valid US/Canada number (10 digits)"
+    : null;
+
   async function handleCall() {
-    if (!phone.trim()) return;
+    if (!normalized) return;
     setError(null);
     setStatus("creating");
 
@@ -43,7 +56,7 @@ function DemoCallCard({ onCallComplete }: { onCallComplete: () => void }) {
       // Step 1: Create a demo person
       const person = await api.post<{ id: string }>("/persons", {
         name: "Demo Call",
-        phone: phone.trim(),
+        phone: normalized,
       });
 
       // Step 2: Trigger the call
@@ -120,8 +133,9 @@ function DemoCallCard({ onCallComplete }: { onCallComplete: () => void }) {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   disabled={isActive}
-                  className="h-11"
+                  className={`h-11 ${phoneError ? "border-danger focus:ring-danger/20 focus:border-danger" : ""}`}
                 />
+                {phoneError && <p className="text-xs text-danger mt-1">{phoneError}</p>}
               </div>
 
               <div>
@@ -129,27 +143,27 @@ function DemoCallCard({ onCallComplete }: { onCallComplete: () => void }) {
                 <div className="flex rounded-[var(--radius)] border border-border overflow-hidden h-11">
                   <button
                     type="button"
-                    onClick={() => setCallType("weekly")}
+                    onClick={() => setCallType("standard")}
                     disabled={isActive}
                     className={`px-4 text-sm font-medium transition-colors cursor-pointer ${
-                      callType === "weekly"
+                      callType === "standard"
                         ? "bg-primary text-primary-foreground"
                         : "bg-card text-muted-foreground hover:bg-muted"
                     } disabled:opacity-50`}
                   >
-                    Weekly
+                    Standard
                   </button>
                   <button
                     type="button"
-                    onClick={() => setCallType("quarterly")}
+                    onClick={() => setCallType("comprehensive")}
                     disabled={isActive}
                     className={`px-4 text-sm font-medium transition-colors border-l border-border cursor-pointer ${
-                      callType === "quarterly"
+                      callType === "comprehensive"
                         ? "bg-primary text-primary-foreground"
                         : "bg-card text-muted-foreground hover:bg-muted"
                     } disabled:opacity-50`}
                   >
-                    Quarterly
+                    Comprehensive
                   </button>
                 </div>
               </div>
@@ -161,7 +175,7 @@ function DemoCallCard({ onCallComplete }: { onCallComplete: () => void }) {
               ) : (
                 <Button
                   onClick={handleCall}
-                  disabled={!phone.trim() || isActive}
+                  disabled={!normalized || isActive}
                   size="md"
                   className="h-11 shrink-0 min-w-[120px]"
                 >
