@@ -134,7 +134,10 @@ if (env.TWILIO_INTELLIGENCE_SERVICE_SID) {
       .services(env.TWILIO_INTELLIGENCE_SERVICE_SID!)
       .update({ webhookUrl, webhookHttpMethod: "POST" })
       .then(() => console.log(`[intelligence] Webhook URL set to ${webhookUrl}`))
-      .catch((err: Error) => console.warn(`[intelligence] Failed to update webhook URL: ${err.message}`));
+      .catch((err: Error) => {
+        console.error(`[intelligence] FATAL: Failed to update webhook URL: ${err.message}`);
+        process.exit(1);
+      });
   });
 }
 

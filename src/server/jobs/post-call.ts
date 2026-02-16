@@ -109,11 +109,11 @@ async function fetchAndStoreEnrichedTranscript(callId: string, callSid: string) 
       logConversationLatency(enriched.sentences);
       return;
     } catch (err) {
-      console.warn(`[post-call:intelligence] Attempt ${attempt + 1} failed:`, err);
+      console.error(`[post-call:intelligence] Attempt ${attempt + 1} failed:`, err);
     }
   }
 
-  console.warn(`[post-call:intelligence] Gave up fetching transcript for call ${callId} after ${MAX_ATTEMPTS} attempts`);
+  throw new Error(`[post-call:intelligence] Failed to fetch enriched transcript for call ${callId} after ${MAX_ATTEMPTS} attempts`);
 }
 
 /**

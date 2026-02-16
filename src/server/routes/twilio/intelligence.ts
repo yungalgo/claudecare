@@ -18,44 +18,38 @@ twilioIntelligenceRoutes.post("/", async (c) => {
   console.log(`[twilio:intelligence] Webhook received: transcript=${transcriptSid} call=${callSid}`);
 
   if (!transcriptSid) {
-    console.warn("[twilio:intelligence] No TranscriptSid in webhook body");
-    return c.json({ ok: true });
+    console.error("[twilio:intelligence] No TranscriptSid in webhook body");
+    return c.json({ error: "Missing TranscriptSid" }, 400);
   }
 
   if (!callSid) {
-    console.warn("[twilio:intelligence] Missing CallSid in webhook body");
-    return c.json({ ok: true });
+    console.error("[twilio:intelligence] Missing CallSid in webhook body");
+    return c.json({ error: "Missing CallSid" }, 400);
   }
 
-  // Find the call by Twilio callSid
   const [call] = await db
     .select({ id: schema.calls.id })
     .from(schema.calls)
     .where(eq(schema.calls.callSid, callSid));
 
   if (!call) {
-    console.warn(`[twilio:intelligence] No call found for callSid=${callSid}`);
-    return c.json({ ok: true });
+    console.error(`[twilio:intelligence] No call found for callSid=${callSid}`);
+    return c.json({ error: "Call not found" }, 404);
   }
 
-  // Fetch enriched transcript from Twilio Intelligence API
-  try {
-    const enriched = await fetchEnrichedTranscript(transcriptSid);
+  const enriched = await fetchEnrichedTranscript(transcriptSid);
 
-    await db
-      .update(schema.calls)
-      .set({
-        enrichedTranscript: enriched,
-        transcriptSid: transcriptSid,
-      })
-      .where(eq(schema.calls.id, call.id));
+  await db
+    .update(schema.calls)
+    .set({
+      enrichedTranscript: enriched,
+      transcriptSid: transcriptSid,
+    })
+    .where(eq(schema.calls.id, call.id));
 
-    console.log(
-      `[twilio:intelligence] Enriched transcript saved for call ${call.id} (${enriched.sentences.length} sentences)`,
-    );
-  } catch (err) {
-    console.error(`[twilio:intelligence] Failed to fetch enriched transcript:`, err);
-  }
+  console.log(
+    `[twilio:intelligence] Enriched transcript saved for call ${call.id} (${enriched.sentences.length} sentences)`,
+  );
 
   return c.json({ ok: true });
 });

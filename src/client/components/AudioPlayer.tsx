@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useRef, useEffect, useCallback } from "react";
+import { toast } from "sonner";
 import { api } from "../lib/api.ts";
 
 // --- Types ---
@@ -30,7 +31,7 @@ interface CallInfo {
   id: string;
   personName: string;
   duration: number;
-  enrichedTranscript: EnrichedTranscriptData | null;
+  enrichedTranscript: EnrichedTranscriptData;
   createdAt: string;
 }
 
@@ -63,18 +64,22 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const play = useCallback(async (callId: string) => {
     try {
       const call = await api.get<any>(`/calls/${callId}`);
+      if (!call.enrichedTranscript) {
+        toast.error("No transcript available for this call");
+        return;
+      }
       setState({
         call: {
           id: call.id,
           personName: "",
-          duration: call.duration ?? 0,
-          enrichedTranscript: call.enrichedTranscript ?? null,
+          duration: call.duration,
+          enrichedTranscript: call.enrichedTranscript,
           createdAt: call.createdAt,
         },
         isPlaying: true,
       });
     } catch (err) {
-      console.error("Failed to load call:", err);
+      toast.error(err instanceof Error ? err.message : "Failed to load call");
     }
   }, []);
 
@@ -102,7 +107,7 @@ function PlayerFooter() {
   const [playing, setPlaying] = useState(false);
   const [showTranscript, setShowTranscript] = useState(true);
 
-  const sentences = call.enrichedTranscript?.sentences ?? [];
+  const sentences = call.enrichedTranscript.sentences;
 
   // Auto-play on mount
   useEffect(() => {

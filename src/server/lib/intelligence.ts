@@ -9,7 +9,6 @@ export interface EnrichedWord {
   word: string;
   startTime: number;
   endTime: number;
-  confidence: number;
 }
 
 export interface EnrichedSentence {
@@ -17,7 +16,6 @@ export interface EnrichedSentence {
   text: string;
   startTime: number;
   endTime: number;
-  confidence: number;
   words: EnrichedWord[];
 }
 
@@ -37,27 +35,41 @@ export interface EnrichedTranscript {
 // --- Fetcher ---
 
 export async function fetchEnrichedTranscript(transcriptSid: string): Promise<EnrichedTranscript> {
-  // Fetch sentences with word-level timestamps (paginate through all)
   const rawSentences = await client.intelligence.v2
     .transcripts(transcriptSid)
     .sentences.list({ wordTimestamps: true, pageSize: 5000 });
 
-  // Recording transcript: ch1 = agent (Twilio number), ch2 = customer
-  const sentences: EnrichedSentence[] = rawSentences.map((s: any) => ({
-    speaker: s.mediaChannel === 2 ? "agent" : "customer",
-    text: s.transcript,
-    startTime: parseFloat(s.startTime),
-    endTime: parseFloat(s.endTime),
-    confidence: parseFloat(s.confidence ?? "1"),
-    words: (s.words ?? []).map((w: any) => ({
-      word: w.word,
-      startTime: parseFloat(w.start_time ?? "0"),
-      endTime: parseFloat(w.end_time ?? "0"),
-      confidence: parseFloat(w.confidence ?? "1"),
-    })),
-  }));
+  if (rawSentences.length === 0) {
+    throw new Error(`No sentences returned for transcript ${transcriptSid}`);
+  }
 
-  // Fetch operator results (sentiment, topics, etc.) — best-effort
+  // Recording transcript: ch2 = agent (TTS/bot output), ch1 = customer (patient voice)
+  const sentences: EnrichedSentence[] = rawSentences.map((s: any, i: number) => {
+    if (s.startTime == null || s.endTime == null) {
+      throw new Error(`Missing timestamps on sentence ${i} of transcript ${transcriptSid}`);
+    }
+    if (!s.words || s.words.length === 0) {
+      throw new Error(`Missing word timestamps on sentence ${i} of transcript ${transcriptSid} (requested wordTimestamps=true)`);
+    }
+    return {
+      speaker: s.mediaChannel === 2 ? "agent" : "customer",
+      text: s.transcript,
+      startTime: parseFloat(s.startTime),
+      endTime: parseFloat(s.endTime),
+      words: s.words.map((w: any, wi: number) => {
+        if (w.start_time == null || w.end_time == null) {
+          throw new Error(`Missing timestamps on word ${wi} of sentence ${i} in transcript ${transcriptSid}`);
+        }
+        return {
+          word: w.word,
+          startTime: parseFloat(w.start_time),
+          endTime: parseFloat(w.end_time),
+        };
+      }),
+    };
+  });
+
+  // Fetch operator results (sentiment, topics, etc.)
   let operators: OperatorResult[] = [];
   try {
     const rawOperators = await client.intelligence.v2
@@ -69,8 +81,13 @@ export async function fetchEnrichedTranscript(transcriptSid: string): Promise<En
       name: o.name ?? o.operatorType,
       extractedData: o.extractedData,
     }));
-  } catch {
-    // Operators may not be configured — not an error
+  } catch (err: any) {
+    // 404 = no operators configured (expected). Anything else is a real error.
+    if (err.status === 404 || err.code === 20404) {
+      console.log(`[intelligence] No operators configured for transcript ${transcriptSid}`);
+    } else {
+      throw err;
+    }
   }
 
   return {
