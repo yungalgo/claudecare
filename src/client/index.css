@@ -175,6 +175,12 @@ h1, h2, h3, h4, h5, h6 {
   background-clip: text;
 }
 
+/* Waveform animation for live call mockup */
+@keyframes waveform {
+  0%, 100% { transform: scaleY(0.4); opacity: 0.4; }
+  50% { transform: scaleY(1); opacity: 1; }
+}
+
 /* Custom focus ring */
 :focus-visible {
   outline: 2px solid var(--color-primary);

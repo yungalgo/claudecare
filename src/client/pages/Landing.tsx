@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router";
 import { Button } from "../components/ui.tsx";
 
@@ -23,43 +24,53 @@ export function Landing() {
       </header>
 
       {/* Hero */}
-      <section className="relative overflow-hidden">
+      <section className="relative overflow-hidden bg-noise">
         {/* Decorative background */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary-light/60 via-background to-secondary-light/30" />
-        <div className="absolute top-20 right-0 w-[600px] h-[600px] rounded-full bg-primary/5 blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full bg-secondary/5 blur-3xl" />
+        <div className="absolute top-20 right-0 w-[600px] h-[600px] rounded-full bg-primary/5 blur-3xl animate-float" />
+        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full bg-secondary/5 blur-3xl animate-float-delayed" />
         <div className="absolute top-40 left-1/3 w-[300px] h-[300px] rounded-full bg-accent/5 blur-3xl" />
+        {/* Grid pattern overlay */}
+        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "radial-gradient(circle, var(--color-foreground) 1px, transparent 1px)", backgroundSize: "32px 32px" }} />
 
-        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16 sm:pt-28 sm:pb-20">
-          <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary-light px-4 py-1.5 text-sm text-primary font-medium mb-8">
-              <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-              Built on peer-reviewed clinical instruments
+        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16 sm:pt-28 sm:pb-20">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            {/* Left: copy */}
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary-light px-4 py-1.5 text-sm text-primary font-medium mb-8">
+                <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                Built on peer-reviewed clinical instruments
+              </div>
+
+              <h1 className="font-display text-4xl sm:text-5xl lg:text-[3.5rem] font-semibold text-foreground leading-[1.12] tracking-tight">
+                Evidence-based wellness monitoring,{" "}
+                <span className="text-primary">powered by AI.</span>
+              </h1>
+
+              <p className="mt-6 text-lg sm:text-xl text-muted-foreground leading-relaxed max-w-2xl">
+                Automated AI phone calls that run validated clinical screenings through
+                warm, natural conversation — catching risks early and alerting care
+                teams when someone needs help.
+              </p>
+
+              <div className="mt-10 flex flex-wrap items-center gap-4">
+                <Link to="/signup">
+                  <Button size="lg" className="text-base">
+                    Get Started
+                    <svg className="w-4 h-4 ml-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+                    </svg>
+                  </Button>
+                </Link>
+                <Link to="/signup">
+                  <Button variant="outline" size="lg" className="text-base">Try a Demo Call</Button>
+                </Link>
+              </div>
             </div>
 
-            <h1 className="font-display text-4xl sm:text-5xl lg:text-[3.5rem] font-semibold text-foreground leading-[1.12] tracking-tight">
-              Evidence-based wellness monitoring,{" "}
-              <span className="text-primary">powered by AI.</span>
-            </h1>
-
-            <p className="mt-6 text-lg sm:text-xl text-muted-foreground leading-relaxed max-w-2xl">
-              Weekly AI phone calls that run validated clinical screenings through
-              warm, natural conversation — catching risks early and alerting care
-              teams when someone needs help.
-            </p>
-
-            <div className="mt-10 flex flex-wrap items-center gap-4">
-              <Link to="/signup">
-                <Button size="lg" className="text-base">
-                  Start Free
-                  <svg className="w-4 h-4 ml-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
-                  </svg>
-                </Button>
-              </Link>
-              <Link to="/login">
-                <Button variant="outline" size="lg" className="text-base">Try a Demo Call</Button>
-              </Link>
+            {/* Right: live call mockup */}
+            <div className="hidden lg:block">
+              <LiveCallMockup />
             </div>
           </div>
         </div>
@@ -126,7 +137,7 @@ export function Landing() {
       </section>
 
       {/* Built on Peer-Reviewed Research */}
-      <section className="py-20 sm:py-28 bg-card border-y border-border relative overflow-hidden">
+      <section className="py-20 sm:py-28 bg-card border-y border-border relative overflow-hidden bg-noise">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full bg-primary/3 blur-3xl" />
         <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full bg-accent/3 blur-3xl" />
 
@@ -418,7 +429,7 @@ export function Landing() {
       </section>
 
       {/* CTA */}
-      <section className="py-20 sm:py-28 relative overflow-hidden">
+      <section className="py-20 sm:py-28 relative overflow-hidden bg-noise">
         <div className="absolute inset-0 bg-gradient-to-br from-primary-light/40 via-background to-secondary-light/20" />
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] rounded-full bg-primary/4 blur-3xl" />
 
@@ -427,16 +438,24 @@ export function Landing() {
             Ready to modernize your <span className="text-primary">wellness monitoring</span>?
           </h2>
           <p className="text-muted-foreground mt-4 text-lg max-w-lg mx-auto leading-relaxed">
-            Create your free account, upload your client roster, and start receiving
+            Create an account, upload your client roster, and start receiving
             clinical-grade wellness insights this week.
           </p>
-          <div className="mt-10">
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
             <Link to="/signup">
               <Button size="lg" className="text-base">
-                Create Free Account
+                Get Started
                 <svg className="w-4 h-4 ml-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
                   <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
                 </svg>
+              </Button>
+            </Link>
+            <Link to="/signup">
+              <Button variant="outline" size="lg" className="text-base">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z" />
+                </svg>
+                Try a Demo Call
               </Button>
             </Link>
           </div>
@@ -450,9 +469,180 @@ export function Landing() {
             <img src="/logogram.svg" alt="" className="w-7 h-7" />
             <img src="/logotype.svg" alt="Claude Care" className="h-4" />
           </Link>
-          <p className="text-sm text-muted-foreground">&copy; {new Date().getFullYear()} ClaudeCare. All rights reserved.</p>
+          <div className="flex items-center gap-5">
+            <a
+              href="https://github.com/your-org/claudecare"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-muted-foreground hover:text-foreground transition-colors"
+              title="View on GitHub"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z" />
+              </svg>
+            </a>
+            <p className="text-sm text-muted-foreground">Made for the Claude Code Hackathon</p>
+          </div>
         </div>
       </footer>
+    </div>
+  );
+}
+
+// ---- Hero call mockup ----
+
+const MOCK_CONVERSATION = [
+  { speaker: "agent" as const, text: "Hi Margaret, this is Sarah from ClaudeCare. How are you doing today?" },
+  { speaker: "caller" as const, text: "Oh hi Sarah! I'm doing alright, a little tired today." },
+  { speaker: "agent" as const, text: "I'm sorry to hear that. Have you been sleeping okay this week?" },
+  { speaker: "caller" as const, text: "Not great, my hip has been bothering me at night." },
+  { speaker: "agent" as const, text: "I understand. Have you been able to eat regular meals?" },
+  { speaker: "caller" as const, text: "Yes, my daughter brought over some soup yesterday." },
+];
+
+function LiveCallMockup() {
+  const [visibleLines, setVisibleLines] = useState(0);
+  const [activePhase, setActivePhase] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setVisibleLines((prev) => {
+        if (prev >= MOCK_CONVERSATION.length) {
+          // Reset after pause
+          setTimeout(() => { setVisibleLines(0); setActivePhase(0); }, 2000);
+          return prev;
+        }
+        return prev + 1;
+      });
+      setActivePhase((prev) => Math.min(prev + 1, 2));
+    }, 2800);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Auto-scroll to bottom
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.scrollTop = containerRef.current.scrollHeight;
+    }
+  }, [visibleLines]);
+
+  const phases = ["Opening", "CLOVA-5", "PHQ-2", "Ottawa 3DY", "Needs", "Close"];
+
+  return (
+    <div className="relative">
+      {/* Glow behind the card */}
+      <div className="absolute -inset-4 bg-gradient-to-br from-primary/10 via-transparent to-secondary/10 rounded-3xl blur-2xl" />
+
+      <div className="relative rounded-2xl border border-border bg-card shadow-warm-lg overflow-hidden">
+        {/* Call header */}
+        <div className="px-5 py-4 border-b border-border bg-gradient-to-r from-primary/5 to-transparent">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z" />
+                  </svg>
+                </div>
+                <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-success border-2 border-card" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">Margaret Wilson</p>
+                <p className="text-xs text-muted-foreground">Standard wellness check-in</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75" />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-success" />
+              </span>
+              <CallTimer />
+            </div>
+          </div>
+        </div>
+
+        {/* Phase progress */}
+        <div className="px-5 py-3 border-b border-border/60 bg-muted/30">
+          <div className="flex items-center gap-1.5">
+            {phases.map((p, i) => (
+              <div key={p} className="flex items-center gap-1.5">
+                <div className={`h-1.5 rounded-full transition-all duration-500 ${i <= activePhase ? "bg-primary w-8" : "bg-border w-4"}`} />
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] text-muted-foreground mt-1.5 font-medium">Phase {activePhase + 1}: {phases[activePhase]}</p>
+        </div>
+
+        {/* Conversation */}
+        <div ref={containerRef} className="px-5 py-4 h-[240px] overflow-hidden space-y-3">
+          {MOCK_CONVERSATION.slice(0, visibleLines).map((line, i) => (
+            <div
+              key={i}
+              className={`flex ${line.speaker === "agent" ? "justify-start" : "justify-end"} animate-in`}
+              style={{ animationDelay: `${i * 50}ms` }}
+            >
+              <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                line.speaker === "agent"
+                  ? "bg-primary/8 text-foreground rounded-bl-md"
+                  : "bg-muted text-foreground rounded-br-md"
+              }`}>
+                <p className="text-[10px] font-medium mb-0.5 opacity-50">{line.speaker === "agent" ? "Sarah (AI)" : "Margaret"}</p>
+                {line.text}
+              </div>
+            </div>
+          ))}
+          {visibleLines > 0 && visibleLines < MOCK_CONVERSATION.length && (
+            <div className="flex justify-start">
+              <div className="bg-primary/8 rounded-2xl rounded-bl-md px-4 py-3">
+                <div className="flex gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Waveform bar */}
+        <div className="px-5 py-3 border-t border-border/60 bg-muted/20">
+          <AudioWaveform />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CallTimer() {
+  const [seconds, setSeconds] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => setSeconds((s) => s + 1), 1000);
+    return () => clearInterval(interval);
+  }, []);
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return (
+    <span className="text-xs font-mono text-muted-foreground tabular-nums">
+      {m}:{String(s).padStart(2, "0")}
+    </span>
+  );
+}
+
+function AudioWaveform() {
+  return (
+    <div className="flex items-center gap-[3px] h-6 justify-center">
+      {Array.from({ length: 32 }).map((_, i) => (
+        <div
+          key={i}
+          className="w-[3px] rounded-full bg-primary/30"
+          style={{
+            height: `${Math.random() * 16 + 4}px`,
+            animation: "waveform 1.2s ease-in-out infinite",
+            animationDelay: `${i * 40}ms`,
+          }}
+        />
+      ))}
     </div>
   );
 }
