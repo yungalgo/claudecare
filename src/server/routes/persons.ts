@@ -30,10 +30,11 @@ personRoutes.get("/", async (c) => {
   }
 
   if (search) {
+    const escaped = search.replace(/[%_]/g, "\\$&");
     conditions.push(
       or(
-        like(schema.persons.name, `%${search}%`),
-        like(schema.persons.phone, `%${search}%`),
+        like(schema.persons.name, `%${escaped}%`),
+        like(schema.persons.phone, `%${escaped}%`),
       )!,
     );
   }

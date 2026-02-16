@@ -125,30 +125,27 @@ function DemoCallCard({ onCallComplete }: { onCallComplete: () => void }) {
             </div>
 
             {/* Right: controls */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3 sm:min-w-[480px]">
-              <div className="flex-1">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <div className="w-full sm:w-48">
                 <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Phone number</label>
                 <Input
                   type="tel"
-                  placeholder="+1 (555) 123-4567"
+                  placeholder="(555) 123-4567"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   disabled={isActive}
-                  className={`h-11 ${phoneError ? "border-danger focus:ring-danger/20 focus:border-danger" : ""}`}
+                  className={`h-10 ${phoneError ? "border-danger focus:ring-danger/20 focus:border-danger" : ""}`}
                 />
-                <p className={`text-xs mt-1 h-4 ${phoneError ? "text-danger" : "invisible"}`}>
-                  {phoneError || "\u00A0"}
-                </p>
               </div>
 
-              <div>
+              <div className="shrink-0">
                 <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Call type</label>
-                <div className="flex rounded-[var(--radius)] border border-border overflow-hidden h-11 w-[240px]">
+                <div className="flex rounded-[var(--radius)] border border-border overflow-hidden h-10">
                   <button
                     type="button"
                     onClick={() => setCallType("standard")}
                     disabled={isActive}
-                    className={`flex-1 text-sm font-medium transition-colors cursor-pointer ${
+                    className={`w-[100px] text-sm font-medium transition-colors cursor-pointer ${
                       callType === "standard"
                         ? "bg-primary text-primary-foreground"
                         : "bg-card text-muted-foreground hover:bg-muted"
@@ -160,7 +157,7 @@ function DemoCallCard({ onCallComplete }: { onCallComplete: () => void }) {
                     type="button"
                     onClick={() => setCallType("comprehensive")}
                     disabled={isActive}
-                    className={`flex-1 text-sm font-medium transition-colors border-l border-border cursor-pointer ${
+                    className={`w-[120px] text-sm font-medium transition-colors border-l border-border cursor-pointer ${
                       callType === "comprehensive"
                         ? "bg-primary text-primary-foreground"
                         : "bg-card text-muted-foreground hover:bg-muted"
@@ -171,26 +168,29 @@ function DemoCallCard({ onCallComplete }: { onCallComplete: () => void }) {
                 </div>
               </div>
 
-              {status === "completed" || status === "failed" ? (
-                <Button onClick={resetDemo} variant="outline" size="md" className="h-11 shrink-0">
-                  Try Again
-                </Button>
-              ) : (
-                <Button
-                  onClick={handleCall}
-                  disabled={!normalized || isActive}
-                  size="md"
-                  className="h-11 shrink-0 min-w-[120px]"
-                >
-                  <PhoneOutIcon className="w-4 h-4" />
-                  {status === "idle" ? "Call Me" : status === "creating" ? "Setting up..." : "Calling..."}
-                </Button>
-              )}
+              <div className="shrink-0 self-end">
+                {status === "completed" || status === "failed" ? (
+                  <Button onClick={resetDemo} variant="outline" size="md" className="h-10">
+                    Try Again
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleCall}
+                    disabled={!normalized || isActive}
+                    size="md"
+                    className="h-10 min-w-[110px]"
+                  >
+                    <PhoneOutIcon className="w-4 h-4" />
+                    {status === "idle" ? "Call Me" : status === "creating" ? "Setting up..." : "Calling..."}
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Status indicator (fixed height to prevent layout shift) */}
-          <div className="mt-4 ml-[46px] min-h-[28px]">
+          {/* Validation + status */}
+          <div className="mt-3 ml-[46px] min-h-[24px]">
+            {phoneError && <p className="text-xs text-danger mb-2">{phoneError}</p>}
             {status !== "idle" && (
               <>
                 {error ? (

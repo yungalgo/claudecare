@@ -52,6 +52,35 @@ app.use(
   }),
 );
 
+// Auth rate limiting: 10 attempts/min per IP
+app.use(
+  "/api/auth/sign-in/*",
+  rateLimiter({
+    windowMs: 60_000,
+    limit: 10,
+    keyGenerator: (c) => `auth:${c.req.header("x-forwarded-for") ?? "anonymous"}`,
+  }),
+);
+app.use(
+  "/api/auth/sign-up/*",
+  rateLimiter({
+    windowMs: 60_000,
+    limit: 5,
+    keyGenerator: (c) => `signup:${c.req.header("x-forwarded-for") ?? "anonymous"}`,
+  }),
+);
+
+// Seed rate limiting: 1 request/5min per IP
+app.use(
+  "/api/seed",
+  rateLimiter({
+    windowMs: 300_000,
+    limit: 1,
+    keyGenerator: (c) => `seed:${c.req.header("x-forwarded-for") ?? "anonymous"}`,
+    message: { error: "Seed can only be run once every 5 minutes" },
+  }),
+);
+
 // --- Auth routes (handled by better-auth) ---
 app.on(["GET", "POST"], "/api/auth/*", (c) => {
   return auth.handler(c.req.raw);

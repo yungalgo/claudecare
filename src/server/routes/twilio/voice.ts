@@ -93,11 +93,6 @@ twilioVoiceRoutes.post("/answer", async (c) => {
   // Human answered — proceed with ConversationRelay
   console.log(`[voice] Human answered, using: ${voice.name} (${voice.config})`);
   return c.text(conversationRelayTwiml(wsToken, voice.config), 200, { "Content-Type": "application/xml" });
-  } catch (err) {
-    console.error("[voice] Error in /answer handler:", err);
-    const fallback = `<?xml version="1.0" encoding="UTF-8"?><Response><Say>We're sorry, a system error occurred. Please try again later.</Say><Hangup/></Response>`;
-    return c.text(fallback, 200, { "Content-Type": "application/xml" });
-  }
 });
 
 // --- Inbound call handler ---
