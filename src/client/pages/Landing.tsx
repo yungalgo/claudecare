@@ -7,16 +7,9 @@ export function Landing() {
       {/* Header */}
       <header className="border-b border-border/60 bg-card/60 backdrop-blur-lg sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
-          <Link to="/" className="inline-flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
-                <path d="M12 4v8l4 4" />
-                <circle cx="12" cy="12" r="9" strokeWidth={2} />
-              </svg>
-            </div>
-            <span className="font-display font-semibold text-foreground text-lg tracking-tight">
-              claude<span className="text-primary">care</span>
-            </span>
+          <Link to="/" className="inline-flex items-center gap-2">
+            <img src="/logogram.svg" alt="" className="w-7 h-7" />
+            <img src="/logotype.svg" alt="Claude Care" className="h-4" />
           </Link>
           <div className="flex items-center gap-3">
             <Link to="/login">
