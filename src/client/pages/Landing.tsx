@@ -491,13 +491,27 @@ export function Landing() {
 
 // ---- Hero call mockup ----
 
-const MOCK_CONVERSATION = [
-  { speaker: "agent" as const, text: "Hi Margaret, this is Sarah from ClaudeCare. How are you doing today?" },
-  { speaker: "caller" as const, text: "Oh hi Sarah! I'm doing alright, a little tired today." },
-  { speaker: "agent" as const, text: "I'm sorry to hear that. Have you been sleeping okay this week?" },
-  { speaker: "caller" as const, text: "Not great, my hip has been bothering me at night." },
-  { speaker: "agent" as const, text: "I understand. Have you been able to eat regular meals?" },
-  { speaker: "caller" as const, text: "Yes, my daughter brought over some soup yesterday." },
+// Each line can optionally extract a score that appears as a badge
+interface MockLine {
+  speaker: "agent" | "caller";
+  text: string;
+  score?: { label: string; value: string; color: string };
+  phase?: number; // advance to this phase when this line appears
+}
+
+const MOCK_CONVERSATION: MockLine[] = [
+  { speaker: "agent", text: "Hi Margaret, this is Sarah from ClaudeCare. How are you doing today?", phase: 0 },
+  { speaker: "caller", text: "Oh hi Sarah! I'm doing alright, a little tired today." },
+  { speaker: "agent", text: "Have you been sleeping okay this week?", phase: 1 },
+  { speaker: "caller", text: "Not great, my hip has been bothering me at night.", score: { label: "Sleep", value: "2/5", color: "bg-warning text-warning-foreground" } },
+  { speaker: "agent", text: "I'm sorry to hear that. Have you been able to eat regular meals?" },
+  { speaker: "caller", text: "Yes, my daughter brought over some soup yesterday.", score: { label: "Meals", value: "4/5", color: "bg-success-light text-success" } },
+  { speaker: "agent", text: "That's wonderful. Have you been able to get out or talk to anyone this week?" },
+  { speaker: "caller", text: "Just my daughter on Sunday. It's been quiet otherwise.", score: { label: "Social", value: "2/5", color: "bg-warning text-warning-foreground" } },
+  { speaker: "agent", text: "I'd like to ask two quick questions about how you've been feeling lately.", phase: 2 },
+  { speaker: "caller", text: "Sure, go ahead." },
+  { speaker: "agent", text: "Over the last two weeks, have you had little interest or pleasure in doing things?" },
+  { speaker: "caller", text: "Maybe several days, I just haven't felt like doing much.", score: { label: "PHQ-2", value: "Q1: 1", color: "bg-primary-light text-primary" } },
 ];
 
 function LiveCallMockup() {
@@ -506,21 +520,34 @@ function LiveCallMockup() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setVisibleLines((prev) => {
-        if (prev >= MOCK_CONVERSATION.length) {
-          // Reset after pause
-          setTimeout(() => { setVisibleLines(0); setActivePhase(0); }, 2000);
-          return prev;
-        }
-        return prev + 1;
-      });
-      setActivePhase((prev) => Math.min(prev + 1, 2));
-    }, 2800);
-    return () => clearInterval(interval);
+    // Start fast (800ms for first few), then settle to 2s
+    let lineIndex = 0;
+    let timeout: ReturnType<typeof setTimeout>;
+
+    function showNext() {
+      lineIndex++;
+      if (lineIndex > MOCK_CONVERSATION.length) {
+        // Pause then reset
+        timeout = setTimeout(() => {
+          setVisibleLines(0);
+          setActivePhase(0);
+          lineIndex = 0;
+          timeout = setTimeout(showNext, 600);
+        }, 3000);
+        return;
+      }
+      setVisibleLines(lineIndex);
+      const line = MOCK_CONVERSATION[lineIndex - 1];
+      if (line?.phase !== undefined) setActivePhase(line.phase);
+      const delay = lineIndex <= 2 ? 1200 : 2000;
+      timeout = setTimeout(showNext, delay);
+    }
+
+    timeout = setTimeout(showNext, 800);
+    return () => clearTimeout(timeout);
   }, []);
 
-  // Auto-scroll to bottom
+  // Auto-scroll
   useEffect(() => {
     if (containerRef.current) {
       containerRef.current.scrollTop = containerRef.current.scrollHeight;
@@ -529,21 +556,24 @@ function LiveCallMockup() {
 
   const phases = ["Opening", "CLOVA-5", "PHQ-2", "Ottawa 3DY", "Needs", "Close"];
 
+  // Collect visible scores for the assessment panel
+  const visibleScores = MOCK_CONVERSATION.slice(0, visibleLines)
+    .filter((l) => l.score)
+    .map((l) => l.score!);
+
   return (
     <div className="relative">
-      {/* Glow behind the card */}
+      {/* Glow */}
       <div className="absolute -inset-4 bg-gradient-to-br from-primary/10 via-transparent to-secondary/10 rounded-3xl blur-2xl" />
 
       <div className="relative rounded-2xl border border-border bg-card shadow-warm-lg overflow-hidden">
-        {/* Call header */}
+        {/* Call header with person avatar */}
         <div className="px-5 py-4 border-b border-border bg-gradient-to-r from-primary/5 to-transparent">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="relative">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <svg className="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z" />
-                  </svg>
+                <div className="w-11 h-11 rounded-full bg-gradient-to-br from-secondary/80 to-secondary flex items-center justify-center text-white font-display font-semibold text-sm">
+                  MW
                 </div>
                 <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-success border-2 border-card" />
               </div>
@@ -563,50 +593,75 @@ function LiveCallMockup() {
         </div>
 
         {/* Phase progress */}
-        <div className="px-5 py-3 border-b border-border/60 bg-muted/30">
+        <div className="px-5 py-2.5 border-b border-border/60 bg-muted/30">
           <div className="flex items-center gap-1.5">
             {phases.map((p, i) => (
-              <div key={p} className="flex items-center gap-1.5">
-                <div className={`h-1.5 rounded-full transition-all duration-500 ${i <= activePhase ? "bg-primary w-8" : "bg-border w-4"}`} />
-              </div>
+              <div key={p} className={`h-1.5 rounded-full transition-all duration-500 ${i <= activePhase ? "bg-primary w-8" : "bg-border w-4"}`} />
             ))}
           </div>
-          <p className="text-[10px] text-muted-foreground mt-1.5 font-medium">Phase {activePhase + 1}: {phases[activePhase]}</p>
+          <p className="text-[10px] text-muted-foreground mt-1 font-medium">Phase {activePhase + 1}: {phases[activePhase]}</p>
         </div>
 
-        {/* Conversation */}
-        <div ref={containerRef} className="px-5 py-4 h-[240px] overflow-hidden space-y-3">
-          {MOCK_CONVERSATION.slice(0, visibleLines).map((line, i) => (
-            <div
-              key={i}
-              className={`flex ${line.speaker === "agent" ? "justify-start" : "justify-end"} animate-in`}
-              style={{ animationDelay: `${i * 50}ms` }}
-            >
-              <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-                line.speaker === "agent"
-                  ? "bg-primary/8 text-foreground rounded-bl-md"
-                  : "bg-muted text-foreground rounded-br-md"
-              }`}>
-                <p className="text-[10px] font-medium mb-0.5 opacity-50">{line.speaker === "agent" ? "Sarah (AI)" : "Margaret"}</p>
-                {line.text}
-              </div>
-            </div>
-          ))}
-          {visibleLines > 0 && visibleLines < MOCK_CONVERSATION.length && (
-            <div className="flex justify-start">
-              <div className="bg-primary/8 rounded-2xl rounded-bl-md px-4 py-3">
-                <div className="flex gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: "0ms" }} />
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: "150ms" }} />
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: "300ms" }} />
+        {/* Main area: conversation + live scores */}
+        <div className="flex">
+          {/* Conversation */}
+          <div ref={containerRef} className="flex-1 px-4 py-3 h-[280px] overflow-hidden space-y-2.5">
+            {MOCK_CONVERSATION.slice(0, visibleLines).map((line, i) => (
+              <div key={i} className={`flex ${line.speaker === "agent" ? "justify-start" : "justify-end"} animate-in`}>
+                <div className={`max-w-[90%] rounded-2xl px-3.5 py-2 text-[13px] leading-relaxed ${
+                  line.speaker === "agent"
+                    ? "bg-primary/8 text-foreground rounded-bl-md"
+                    : "bg-muted text-foreground rounded-br-md"
+                }`}>
+                  {line.text}
                 </div>
               </div>
+            ))}
+            {visibleLines > 0 && visibleLines < MOCK_CONVERSATION.length && (
+              <div className="flex justify-start">
+                <div className="bg-primary/8 rounded-2xl rounded-bl-md px-4 py-3">
+                  <div className="flex gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: "150ms" }} />
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: "300ms" }} />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Live assessment panel */}
+          <div className="w-[140px] border-l border-border/60 bg-muted/20 px-3 py-3 flex flex-col">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Live Scores</p>
+            <div className="space-y-1.5 flex-1">
+              {visibleScores.map((s, i) => (
+                <div key={i} className="animate-in" style={{ animationDelay: `${i * 80}ms` }}>
+                  <div className={`rounded-lg px-2.5 py-1.5 ${s.color} text-[11px] font-medium`}>
+                    <span className="opacity-70">{s.label}</span>
+                    <span className="float-right font-semibold">{s.value}</span>
+                  </div>
+                </div>
+              ))}
+              {visibleScores.length === 0 && (
+                <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/50 mt-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-border animate-pulse" />
+                  Listening...
+                </div>
+              )}
             </div>
-          )}
+            {visibleScores.length > 0 && (
+              <div className="mt-2 pt-2 border-t border-border/40">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-success" />
+                  <span className="text-[10px] font-medium text-success">Flag: Green</span>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Waveform bar */}
-        <div className="px-5 py-3 border-t border-border/60 bg-muted/20">
+        {/* Waveform */}
+        <div className="px-5 py-2.5 border-t border-border/60 bg-muted/20">
           <AudioWaveform />
         </div>
       </div>
@@ -631,13 +686,13 @@ function CallTimer() {
 
 function AudioWaveform() {
   return (
-    <div className="flex items-center gap-[3px] h-6 justify-center">
+    <div className="flex items-center gap-[3px] h-5 justify-center">
       {Array.from({ length: 32 }).map((_, i) => (
         <div
           key={i}
           className="w-[3px] rounded-full bg-primary/30"
           style={{
-            height: `${Math.random() * 16 + 4}px`,
+            height: `${Math.random() * 14 + 3}px`,
             animation: "waveform 1.2s ease-in-out infinite",
             animationDelay: `${i * 40}ms`,
           }}
