@@ -70,7 +70,7 @@ export const handleWebSocket = {
           const greeting = await getGreeting(session);
           const greetLatency = Math.round(performance.now() - t0);
 
-          console.log(`[ws] Bot (${greetLatency}ms, type=${callType}): "${greeting.substring(0, 80)}..."`);
+          console.log(`[ws] 🤖 Bot (${greetLatency}ms, type=${callType}):\n     "${greeting}"`);
           ws.send(JSON.stringify({ type: "text", token: greeting }));
           break;
         }
@@ -78,7 +78,7 @@ export const handleWebSocket = {
         case "prompt": {
           const t0 = performance.now();
           const utterance = data.voicePrompt ?? "";
-          console.log(`[ws] Caller: "${utterance}"`);
+          console.log(`[ws] 🗣️  Caller: "${utterance}"`);
 
           const callSid = wsCallSidMap.get(ws) ?? data.callSid ?? "";
           const session = getSession(callSid);
@@ -90,7 +90,7 @@ export const handleWebSocket = {
           const { text: response, endCall } = await processUtterance(session, utterance);
           const latencyMs = Math.round(performance.now() - t0);
           if (response) {
-            console.log(`[ws] Bot (${latencyMs}ms, phase=${session.currentPhase}): "${response.substring(0, 80)}..."`);
+            console.log(`[ws] 🤖 Bot (${latencyMs}ms, phase=${session.currentPhase}):\n     "${response}"`);
             ws.send(JSON.stringify({ type: "text", token: response }));
           }
           if (endCall) {

@@ -1,8 +1,9 @@
 import { Hono } from "hono";
 import { db, schema } from "../lib/db.ts";
-import { eq, desc, like, or, and } from "drizzle-orm";
+import { eq, desc, like, or, and, count } from "drizzle-orm";
 import { z } from "zod/v4";
 import type { AppVariables } from "../types.ts";
+import { seedForUser } from "./seed.ts";
 
 export const personRoutes = new Hono<{ Variables: AppVariables }>();
 
@@ -18,10 +19,21 @@ function pickAgentName(): string {
 }
 
 // List all persons (with optional search) — scoped to user
+// Auto-seeds demo data on first access so the app feels pre-populated for judges
 personRoutes.get("/", async (c) => {
   const userId = c.get("userId");
   const search = c.req.query("search");
   const status = c.req.query("status") ?? "active";
+
+  // Auto-seed if user has zero persons (first login)
+  const [row] = await db
+    .select({ total: count() })
+    .from(schema.persons)
+    .where(eq(schema.persons.userId, userId));
+
+  if (!row || row.total === 0) {
+    await seedForUser(userId);
+  }
 
   const conditions = [eq(schema.persons.userId, userId)];
 

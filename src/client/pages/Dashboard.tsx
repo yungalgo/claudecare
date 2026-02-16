@@ -188,12 +188,12 @@ function DemoCallCard({ onCallComplete }: { onCallComplete: () => void }) {
             </div>
           </div>
 
-          {/* Validation + status */}
-          <div className="mt-3 ml-[46px] min-h-[24px]">
-            {phoneError && <p className="text-xs text-danger mb-2">{phoneError}</p>}
-            {status !== "idle" && (
-              <>
-                {error ? (
+          {/* Validation + status (only renders when there's content) */}
+          {(phoneError || status !== "idle") && (
+            <div className="mt-3 ml-[46px]">
+              {phoneError && <p className="text-xs text-danger mb-2">{phoneError}</p>}
+              {status !== "idle" && (
+                error ? (
                   <div className="inline-flex items-center gap-2.5 px-3.5 py-2 rounded-lg bg-danger-light border border-danger/20">
                     <span className="w-2 h-2 rounded-full bg-danger shrink-0" />
                     <span className="text-sm text-danger font-medium">{error}</span>
@@ -208,10 +208,10 @@ function DemoCallCard({ onCallComplete }: { onCallComplete: () => void }) {
                     <StepArrow />
                     <DemoStatusStep label="Completed" active={false} done={status === "completed"} />
                   </div>
-                )}
-              </>
-            )}
-          </div>
+                )
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -364,21 +364,6 @@ export function Dashboard() {
   const [persons, setPersons] = useState<PersonRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [seeding, setSeeding] = useState(false);
-
-  async function handleSeed() {
-    if (!confirm("This will replace all existing persons with demo data. Continue?")) return;
-    setSeeding(true);
-    try {
-      const result = await api.post<{ persons: number; calls: number; assessments: number; escalations: number }>("/seed", {});
-      toast.success(`Seeded ${result.persons} persons, ${result.calls} calls, ${result.assessments} assessments`);
-      loadPersons();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Seed failed");
-    } finally {
-      setSeeding(false);
-    }
-  }
 
   useEffect(() => {
     loadPersons();
@@ -387,7 +372,7 @@ export function Dashboard() {
   async function loadPersons() {
     setLoading(true);
     try {
-      const data = await api.get<PersonRow[]>(`/persons${search ? `?search=${encodeURIComponent(search)}` : ""}`);
+      const data = await api.get<PersonRow[]>("/persons");
       setPersons(data);
     } catch (err) {
       console.error("Failed to load persons:", err);
@@ -395,11 +380,6 @@ export function Dashboard() {
       setLoading(false);
     }
   }
-
-  useEffect(() => {
-    const timer = setTimeout(loadPersons, 300);
-    return () => clearTimeout(timer);
-  }, [search]);
 
   const total = persons.length;
   const greenCount = persons.filter((p) => p.flag === "green").length;
@@ -416,19 +396,14 @@ export function Dashboard() {
             Overview of all enrolled persons and their current status.
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <Button variant="outline" onClick={handleSeed} disabled={seeding}>
-            {seeding ? "Populating..." : "Populate Demo Data"}
+        <Link to="/upload">
+          <Button>
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            Upload CSV
           </Button>
-          <Link to="/upload">
-            <Button>
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
-              Upload CSV
-            </Button>
-          </Link>
-        </div>
+        </Link>
       </div>
 
       {/* Caller Status */}

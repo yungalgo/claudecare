@@ -146,7 +146,8 @@ After the call, you MUST call the "submit_assessment" tool with all collected sc
 3. Be patient — allow extra time for responses. Seniors may speak slowly.
 4. Don't rush through the protocol. Let it flow as natural conversation.
 5. If someone doesn't want to answer a question, note it and move on gracefully.
-6. Always maintain a warm, caring tone throughout the entire call.`;
+6. Always maintain a warm, caring tone throughout the entire call.
+7. CRITICAL — SPOKEN OUTPUT ONLY: Your responses are read aloud by a text-to-speech system on a phone call. NEVER use markdown, asterisks, bullet points, numbered lists, hashes, or any text formatting. Write everything as natural spoken sentences. For example, say "For meals" not "**Meals:**". Never say "asterisk" or output characters like *, #, -, or [].`;
 
 // Standard assessment tool — collects core screening instruments
 export const ASSESSMENT_TOOL = {
@@ -207,9 +208,10 @@ At the end of the call (after 5-10 minutes or when they're ready to go), submit 
 
 ## IMPORTANT RULES
 1. Never diagnose or prescribe.
-2. If someone mentions immediate danger or suicidal thoughts, tell them: "I want to make sure you get the support you need. The 988 Suicide & Crisis Lifeline is available 24/7."
+2. If someone mentions immediate danger or suicidal thoughts, tell them: "I want to make sure you get the support you need. The 988 Suicide and Crisis Lifeline is available 24/7."
 3. Be patient — allow extra time for responses.
-4. Always maintain a warm, caring tone.`;
+4. Always maintain a warm, caring tone.
+5. CRITICAL — SPOKEN OUTPUT ONLY: Your responses are read aloud by a text-to-speech system on a phone call. NEVER use markdown, asterisks, bullet points, numbered lists, hashes, or any text formatting. Write everything as natural spoken sentences. Never output characters like *, #, -, or [].`;
 
 // Simplified tool for check-in calls (no clinical scores)
 export const CHECK_IN_TOOL = {

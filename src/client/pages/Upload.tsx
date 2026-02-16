@@ -76,7 +76,7 @@ export function Upload() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="font-display text-2xl font-semibold text-foreground">Upload Persons</h1>
+        <h1 className="font-display text-2xl font-semibold text-foreground">Upload People</h1>
         <p className="text-muted-foreground text-sm mt-1">
           Upload a CSV file with columns: name, phone, emergency_contact_name, emergency_contact_phone, pcp_name, pcp_phone, notes
         </p>

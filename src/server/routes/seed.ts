@@ -401,21 +401,13 @@ function redEscalations(): { tier: string; reason: string; details: string }[] {
   return shuffled.slice(0, count);
 }
 
-// --- Main seed endpoint ---
+// --- Exported seed function (callable from other routes) ---
 
-seedRoutes.post("/", async (c) => {
-  const userId = c.get("userId");
-
-  // 1. Delete all existing persons for this user (cascade handles calls/assessments/escalations)
+export async function seedForUser(userId: string) {
+  // Delete all existing persons for this user (cascade handles calls/assessments/escalations)
   await db.delete(schema.persons).where(eq(schema.persons.userId, userId));
 
-  let totalPersons = 0;
-  let totalCalls = 0;
-  let totalAssessments = 0;
-  let totalEscalations = 0;
-
   for (const profile of PERSON_PROFILES) {
-    // 2. Create person
     const [person] = await db
       .insert(schema.persons)
       .values({
@@ -433,19 +425,17 @@ seedRoutes.post("/", async (c) => {
         flag: profile.targetFlag,
       })
       .returning();
-    totalPersons++;
 
-    // 3. Create historical calls spread over weeks
+    // Create historical calls spread over weeks
     const callCount = randInt(3, 8);
-    const maxDaysBack = callCount * 8; // spread calls across enough time
+    const maxDaysBack = callCount * 8;
     const callDays: number[] = [];
 
-    // Generate sorted distinct day offsets
     for (let i = 0; i < callCount; i++) {
       const dayOffset = Math.round((maxDaysBack / callCount) * (callCount - i) - randInt(0, 3));
       callDays.push(Math.max(1, dayOffset));
     }
-    callDays.sort((a, b) => b - a); // oldest first (highest days-ago first)
+    callDays.sort((a, b) => b - a);
 
     let latestCallDate: Date | null = null;
     let completedCallCount = 0;
@@ -453,11 +443,9 @@ seedRoutes.post("/", async (c) => {
     for (let i = 0; i < callDays.length; i++) {
       const callDate = daysAgo(callDays[i]!);
 
-      // Most calls completed, occasional failures
       const statusRoll = Math.random();
       let callStatus: string;
       if (i === callDays.length - 1) {
-        // Most recent call is always completed for good demo data
         callStatus = "completed";
       } else if (statusRoll < 0.12) {
         callStatus = "no-answer";
@@ -467,10 +455,8 @@ seedRoutes.post("/", async (c) => {
         callStatus = "completed";
       }
 
-      // Every ~13th call is comprehensive (roughly every 3 months worth)
       const isComprehensive = completedCallCount > 0 && completedCallCount % 4 === 0;
       const callType = isComprehensive ? "comprehensive" : "standard";
-
       const duration = callStatus === "completed" ? randInt(180, 480) : null;
 
       let summary: string | null = null;
@@ -507,13 +493,11 @@ seedRoutes.post("/", async (c) => {
           createdAt: callDate,
         })
         .returning();
-      totalCalls++;
 
       if (callStatus === "completed") {
         completedCallCount++;
         latestCallDate = callDate;
 
-        // 4. Create assessment for completed calls
         const baseAssessment =
           profile.targetFlag === "red"
             ? redAssessment()
@@ -530,27 +514,21 @@ seedRoutes.post("/", async (c) => {
           ...compScores,
           createdAt: completedAt ?? callDate,
         });
-        totalAssessments++;
       }
     }
 
-    // Update person with call stats
     await db
       .update(schema.persons)
-      .set({
-        lastCallAt: latestCallDate,
-        callCount: completedCallCount,
-      })
+      .set({ lastCallAt: latestCallDate, callCount: completedCallCount })
       .where(eq(schema.persons.id, person!.id));
 
-    // 5. Create escalations for yellow/red persons
+    // Create escalations for yellow/red persons
     if (profile.targetFlag === "yellow") {
       const escs = yellowEscalations();
       for (const esc of escs) {
         const escalationAge = randInt(1, 14);
         const isResolved = Math.random() < 0.3;
         const isAcknowledged = !isResolved && Math.random() < 0.5;
-
         await db.insert(schema.escalations).values({
           personId: person!.id,
           tier: esc.tier,
@@ -561,7 +539,6 @@ seedRoutes.post("/", async (c) => {
           resolvedBy: isResolved ? userId : null,
           createdAt: daysAgo(escalationAge),
         });
-        totalEscalations++;
       }
     }
 
@@ -571,7 +548,6 @@ seedRoutes.post("/", async (c) => {
         const escalationAge = randInt(1, 7);
         const isResolved = Math.random() < 0.15;
         const isAcknowledged = !isResolved && Math.random() < 0.4;
-
         await db.insert(schema.escalations).values({
           personId: person!.id,
           tier: esc.tier,
@@ -582,18 +558,15 @@ seedRoutes.post("/", async (c) => {
           resolvedBy: isResolved ? userId : null,
           createdAt: daysAgo(escalationAge),
         });
-        totalEscalations++;
       }
     }
   }
+}
 
-  return c.json({
-    ok: true,
-    seeded: {
-      persons: totalPersons,
-      calls: totalCalls,
-      assessments: totalAssessments,
-      escalations: totalEscalations,
-    },
-  });
+// --- Route endpoint (kept for manual re-seed if needed) ---
+
+seedRoutes.post("/", async (c) => {
+  const userId = c.get("userId");
+  await seedForUser(userId);
+  return c.json({ ok: true });
 });
