@@ -119,7 +119,7 @@ function DemoCallCard({ onCallComplete }: { onCallComplete: () => void }) {
                 <h2 className="font-display text-lg font-semibold text-foreground">Try a Demo Call</h2>
               </div>
               <p className="text-sm text-muted-foreground ml-[46px]">
-                Enter a phone number and ClaudeCare will call with a wellness check-in.
+                Enter a phone number and Claude Care will call with a wellness check-in.
               </p>
             </div>
 
@@ -329,7 +329,7 @@ export function Dashboard() {
           {loading ? (
             <Spinner className="py-20" />
           ) : persons.length === 0 ? (
-            <EmptyState title="No persons found" description="Upload a CSV to get started." />
+            <EmptyState title="No people found" description="Upload a CSV to get started." />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">

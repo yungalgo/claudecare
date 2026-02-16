@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { signUp } from "../lib/auth.ts";
 import { Card, CardContent, Button, Input } from "../components/ui.tsx";
+import { TESTIMONIALS, pickRandom } from "../lib/testimonials.ts";
 
 export function Signup() {
   const navigate = useNavigate();
@@ -10,6 +11,7 @@ export function Signup() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const testimonial = useMemo(() => pickRandom(TESTIMONIALS), []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -27,14 +29,17 @@ export function Signup() {
     <div className="min-h-screen bg-background flex">
       {/* Left decorative panel */}
       <div className="hidden lg:flex lg:w-[45%] bg-secondary relative overflow-hidden items-end p-12">
-        <div className="absolute inset-0 bg-gradient-to-br from-secondary via-secondary to-secondary/80" />
-        <div className="absolute top-1/3 -right-16 w-72 h-72 rounded-full bg-white/5" />
-        <div className="absolute bottom-1/4 -left-8 w-52 h-52 rounded-full bg-white/5" />
+        <img
+          src="/images/caregiver-elderly.jpg"
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-secondary/90 via-secondary/50 to-secondary/30" />
         <div className="relative z-10 text-white">
           <p className="font-display text-3xl font-semibold leading-snug">
-            Set up monitoring for your entire roster in under 5 minutes.
+            &ldquo;{testimonial.quote}&rdquo;
           </p>
-          <p className="mt-6 text-white/70 text-sm">Upload a CSV and let AI handle the rest.</p>
+          <p className="mt-6 text-white/70 text-sm">{testimonial.attribution}</p>
         </div>
       </div>
 
@@ -43,17 +48,11 @@ export function Signup() {
         <div className="w-full max-w-md animate-in">
           <div className="mb-10">
             <Link to="/" className="inline-flex items-center gap-2.5 mb-10">
-              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
-                  <path d="M12 4v8l4 4" /><circle cx="12" cy="12" r="9" strokeWidth={2} />
-                </svg>
-              </div>
-              <span className="font-display font-semibold text-foreground text-lg tracking-tight">
-                claude<span className="text-primary">care</span>
-              </span>
+              <img src="/logogram.svg" alt="" className="w-8 h-8" />
+              <img src="/logotype.svg" alt="Claude Care" className="h-5" />
             </Link>
             <h1 className="font-display text-2xl font-semibold text-foreground">Create your account</h1>
-            <p className="text-muted-foreground mt-1.5">Get started with ClaudeCare in minutes.</p>
+            <p className="text-muted-foreground mt-1.5">Get started with Claude Care in minutes.</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">

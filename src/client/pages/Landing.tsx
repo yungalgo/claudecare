@@ -24,14 +24,15 @@ export function Landing() {
       </header>
 
       {/* Hero */}
-      <section className="relative overflow-hidden bg-noise">
-        {/* Decorative background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary-light/60 via-background to-secondary-light/30" />
-        <div className="absolute top-20 right-0 w-[600px] h-[600px] rounded-full bg-primary/5 blur-3xl animate-float" />
-        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full bg-secondary/5 blur-3xl animate-float-delayed" />
-        <div className="absolute top-40 left-1/3 w-[300px] h-[300px] rounded-full bg-accent/5 blur-3xl" />
-        {/* Grid pattern overlay */}
-        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "radial-gradient(circle, var(--color-foreground) 1px, transparent 1px)", backgroundSize: "32px 32px" }} />
+      <section className="relative overflow-hidden">
+        {/* Background image — mirrored so face is on the left */}
+        <img
+          src="/images/elderly-phone.jpg"
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover object-center -scale-x-100"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/80 to-background/50 lg:to-background/30" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-background/60" />
 
         <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16 sm:pt-28 sm:pb-20">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
@@ -48,9 +49,9 @@ export function Landing() {
               </h1>
 
               <p className="mt-6 text-lg sm:text-xl text-muted-foreground leading-relaxed max-w-2xl">
-                Automated AI phone calls that run validated clinical screenings through
-                warm, natural conversation — catching risks early and alerting care
-                teams when someone needs help.
+                AI phone calls that sound like a caring friend, score like a clinician.
+                Eight validated instruments per conversation, flagging risk and alerting
+                your team before anyone falls through the cracks.
               </p>
 
               <div className="mt-10 flex flex-wrap items-center gap-4">
@@ -76,26 +77,34 @@ export function Landing() {
         </div>
 
         {/* Stat strip */}
-        <div className="relative border-y border-border bg-card/80 backdrop-blur-sm">
+        <div className="relative border-t border-border/40 bg-card/80 backdrop-blur-sm">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 grid grid-cols-1 sm:grid-cols-3 gap-8 stagger-in">
-            <Stat value="14M+" label="Isolated seniors in the U.S." />
-            <Stat value="6" label="Validated instruments per call" />
-            <Stat value="$0.68" label="Average cost per call" />
+            <Stat value="97%" label="cheaper than manual check-ins" />
+            <Stat value="8" label="clinical instruments per call" />
+            <Stat value="< 5 min" label="to flag who needs help today" />
           </div>
         </div>
       </section>
 
       {/* The Problem */}
-      <section className="py-20 sm:py-28">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="relative py-20 sm:py-28 overflow-hidden">
+        {/* Full-section background image */}
+        <img
+          src="/images/elderly-alone.jpg"
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover object-[center_20%]"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#1a1a1a]/75 via-[#1a1a1a]/80 to-[#1a1a1a]/90" />
+
+        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <p className="text-sm font-semibold text-secondary uppercase tracking-widest mb-3">The Problem</p>
-            <h2 className="font-display text-3xl sm:text-4xl font-semibold text-foreground">
-              We can't call everyone. <span className="text-primary">But AI can.</span>
+            <p className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-3">The Problem</p>
+            <h2 className="font-display text-3xl sm:text-4xl font-semibold text-white">
+              We can't call everyone. <span className="text-primary-light">But AI can.</span>
             </h2>
-            <p className="text-muted-foreground mt-4 max-w-2xl mx-auto text-lg leading-relaxed">
-              The geriatric care workforce is shrinking while the aging population grows.
-              Critical health changes go undetected between visits.
+            <p className="text-white/60 mt-4 max-w-2xl mx-auto text-lg leading-relaxed">
+              Knowing who needs help is a data problem. Care teams can't call everyone,
+              and critical changes slip through the cracks between visits.
             </p>
           </div>
 
@@ -103,34 +112,38 @@ export function Landing() {
             <ProblemCard
               stat="14M"
               label="seniors live alone"
-              detail="Over 14 million older adults in the U.S. live alone, many with limited social contact."
+              detail="Most have no one checking on them regularly. A fall, a missed medication, a depressive episode. All invisible until someone calls."
               source="AARP / U.S. Census Bureau"
               icon={<PersonAloneIcon />}
               iconBg="bg-secondary-light"
+              dark
             />
             <ProblemCard
               stat="60%"
               label="of dementia undiagnosed"
-              detail="The majority of dementia cases go undetected, delaying intervention by years."
+              detail="Without routine screening, cognitive decline goes unnoticed for years, past the window where intervention changes outcomes."
               source="Alzheimer's Association"
               icon={<BrainAlertIcon />}
               iconBg="bg-primary-light"
+              dark
             />
             <ProblemCard
               stat="$15-25"
               label="per human wellness call"
-              detail="Manual phone-based check-ins cost $15-25 each. At scale, this is unsustainable."
+              detail="A single human check-in call costs $15-25. Claude Care runs the same screening for $0.68, making weekly contact financially viable."
               source="Industry average"
               icon={<DollarIcon />}
               iconBg="bg-warning-light"
+              dark
             />
             <ProblemCard
               stat="50-100+"
               label="clients per coordinator"
-              detail="Care coordinators managing large panels cannot feasibly call everyone weekly."
+              detail="Coordinators triage by gut feel. The people who seem fine get skipped until they're not fine anymore."
               source="CMS staffing data"
               icon={<OverloadIcon />}
               iconBg="bg-secondary-light"
+              dark
             />
           </div>
         </div>
@@ -138,6 +151,7 @@ export function Landing() {
 
       {/* Built on Peer-Reviewed Research */}
       <section className="py-20 sm:py-28 bg-card border-y border-border relative overflow-hidden bg-noise">
+        <img src="/images/medical-research.jpg" alt="" className="absolute inset-0 w-full h-full object-cover opacity-[0.08]" />
         <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full bg-primary/3 blur-3xl" />
         <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full bg-accent/3 blur-3xl" />
 
@@ -148,7 +162,7 @@ export function Landing() {
               Built on Peer-Reviewed Research
             </h2>
             <p className="text-muted-foreground mt-4 max-w-2xl mx-auto text-lg leading-relaxed">
-              Every screening in ClaudeCare maps to a validated, published instrument.
+              Every screening in Claude Care maps to a validated, published instrument.
               No proprietary scoring. No black boxes.
             </p>
           </div>
@@ -160,7 +174,7 @@ export function Landing() {
               citation="Kim et al., Samsung Research & Seoul National University"
               journal="Nature Medicine (2024)"
               url="https://www.nature.com/articles/s41591-024-03035-1"
-              reason="Foundational study proving AI phone calls can effectively monitor elderly health. Inspiration for ClaudeCare's entire approach."
+              reason="Foundational study proving AI phone calls can effectively monitor elderly health. Inspiration for Claude Care's entire approach."
               color="border-l-primary"
             />
             <InstrumentCard
@@ -243,6 +257,7 @@ export function Landing() {
 
       {/* How the AI Works */}
       <section id="how-it-works" className="py-20 sm:py-28 relative overflow-hidden">
+        <img src="/images/elderly-woman-phone.jpg" alt="" className="absolute inset-0 w-full h-full object-cover opacity-[0.08]" />
         <div className="absolute inset-0 bg-gradient-to-b from-background via-primary-light/20 to-background" />
 
         <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -252,7 +267,8 @@ export function Landing() {
               How the AI Works
             </h2>
             <p className="text-muted-foreground mt-4 max-w-2xl mx-auto text-lg leading-relaxed">
-              Purpose-built dual-model architecture optimized for both conversational warmth and clinical accuracy.
+              One model talks. Another scores. The conversation feels warm and natural.
+              The assessment underneath is clinical-grade.
             </p>
           </div>
 
@@ -269,12 +285,12 @@ export function Landing() {
                 </div>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Sub-second response latency powers the real-time voice conversation via Twilio ConversationRelay.
-                Natural, warm dialogue that feels like talking to a caring friend, not a robot.
+                Sub-second responses power the live voice conversation. The person hears a warm,
+                unhurried friend, not a robot reading a script.
               </p>
               <div className="mt-4 flex items-center gap-2 text-xs font-medium text-accent">
                 <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-                &lt; 1s response latency
+                Average sub-500ms latency
               </div>
             </div>
 
@@ -289,8 +305,8 @@ export function Landing() {
                 </div>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Maximum-accuracy model scores all clinical instruments post-call via structured tool_use.
-                Ensures reliable, consistent assessment output for clinical decision-making.
+                After the call, the most capable model scores every instrument with structured tool_use.
+                No ambiguity, no inconsistency. Just reliable clinical output.
               </p>
               <div className="mt-4 flex items-center gap-2 text-xs font-medium text-primary">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary" />
@@ -319,7 +335,7 @@ export function Landing() {
             <ArchitectureCard
               icon={<MemoryIcon />}
               title="Cross-Call Memory"
-              description="Previous summaries, assessment scores, and coordinator notes are injected into every call. The AI remembers what matters."
+              description="Previous scores, summaries, and coordinator notes carry forward. The AI picks up where it left off. Every call builds on the last."
             />
             <ArchitectureCard
               icon={<CascadeIcon />}
@@ -337,18 +353,31 @@ export function Landing() {
 
       {/* Platform Features — What the Dashboard Does */}
       <section className="py-20 sm:py-28 bg-card border-y border-border relative overflow-hidden">
+        <img src="/images/dashboard-data.jpg" alt="" className="absolute inset-0 w-full h-full object-cover opacity-[0.08]" />
         <div className="absolute top-20 left-0 w-[400px] h-[400px] rounded-full bg-secondary/3 blur-3xl" />
 
         <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <p className="text-sm font-semibold text-secondary uppercase tracking-widest mb-3">The Platform</p>
-            <h2 className="font-display text-3xl sm:text-4xl font-semibold text-foreground">
-              Everything care teams need, <span className="text-gradient">in one dashboard.</span>
-            </h2>
-            <p className="text-muted-foreground mt-4 max-w-2xl mx-auto text-lg leading-relaxed">
-              From uploading your first client to resolving an escalation — every workflow is designed
-              for care coordinators who don't have time to learn new software.
-            </p>
+          {/* Header with side image */}
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-10 lg:gap-14 items-center mb-16">
+            <div className="lg:col-span-3">
+              <p className="text-sm font-semibold text-secondary uppercase tracking-widest mb-3">The Platform</p>
+              <h2 className="font-display text-3xl sm:text-4xl font-semibold text-foreground">
+                Everything care teams need, <span className="text-gradient">in one dashboard.</span>
+              </h2>
+              <p className="text-muted-foreground mt-4 text-lg leading-relaxed">
+                Upload a roster, get structured insights. Built for coordinators
+                who have 10 minutes, not 10 hours.
+              </p>
+            </div>
+            <div className="lg:col-span-2">
+              <div className="rounded-2xl overflow-hidden shadow-warm-lg aspect-[4/3]">
+                <img
+                  src="/images/caregiver-laughing.jpg"
+                  alt="Caregiver and elderly woman laughing together"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </div>
           </div>
 
           {/* Big feature cards — 2 col */}
@@ -429,17 +458,22 @@ export function Landing() {
       </section>
 
       {/* CTA */}
-      <section className="py-20 sm:py-28 relative overflow-hidden bg-noise">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary-light/40 via-background to-secondary-light/20" />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] rounded-full bg-primary/4 blur-3xl" />
+      <section className="py-20 sm:py-28 relative overflow-hidden">
+        <img
+          src="/images/caregiver-elderly.jpg"
+          alt="Caregiver laughing with elderly patient"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/50 to-background/70" />
 
         <div className="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <div className="rounded-2xl bg-card/70 backdrop-blur-lg border border-border/40 px-8 py-12 sm:px-12 sm:py-16 shadow-warm-lg">
           <h2 className="font-display text-3xl sm:text-4xl font-semibold text-foreground">
-            Ready to modernize your <span className="text-primary">wellness monitoring</span>?
+            Know who needs help <span className="text-primary">before they ask.</span>
           </h2>
           <p className="text-muted-foreground mt-4 text-lg max-w-lg mx-auto leading-relaxed">
-            Create an account, upload your client roster, and start receiving
-            clinical-grade wellness insights this week.
+            Upload your roster. Calls start this week.
+            Every person scored, every risk flagged, every care team alerted.
           </p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
             <Link to="/signup">
@@ -458,6 +492,7 @@ export function Landing() {
                 Try a Demo Call
               </Button>
             </Link>
+          </div>
           </div>
         </div>
       </section>
@@ -481,7 +516,13 @@ export function Landing() {
                 <path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z" />
               </svg>
             </a>
-            <p className="text-sm text-muted-foreground">Made for the Claude Code Hackathon</p>
+            <p className="text-sm text-muted-foreground">
+              made by{" "}
+              <a href="https://x.com/yungalgorithm" target="_blank" rel="noopener noreferrer" className="text-foreground hover:text-primary transition-colors font-medium">
+                yung algorithm
+              </a>
+              {" "}for the Claude Code Hackathon
+            </p>
           </div>
         </div>
       </footer>
@@ -720,6 +761,7 @@ function ProblemCard({
   source,
   icon,
   iconBg,
+  dark,
 }: {
   stat: string;
   label: string;
@@ -727,20 +769,25 @@ function ProblemCard({
   source: string;
   icon: React.ReactNode;
   iconBg: string;
+  dark?: boolean;
 }) {
   return (
-    <div className="group rounded-xl border border-border bg-card p-7 transition-all duration-200 hover:shadow-warm-lg hover:-translate-y-0.5">
+    <div className={`group rounded-xl border p-7 transition-all duration-200 hover:-translate-y-0.5 ${
+      dark
+        ? "border-white/10 bg-white/5 backdrop-blur-md hover:bg-white/10"
+        : "border-border bg-card hover:shadow-warm-lg"
+    }`}>
       <div className="flex items-start justify-between mb-4">
         <div>
-          <span className="inline-block font-display text-3xl font-bold text-foreground">{stat}</span>
-          <span className="ml-1.5 text-sm font-medium text-muted-foreground">{label}</span>
+          <span className={`inline-block font-display text-3xl font-bold ${dark ? "text-white" : "text-foreground"}`}>{stat}</span>
+          <span className={`ml-1.5 text-sm font-medium ${dark ? "text-white/60" : "text-muted-foreground"}`}>{label}</span>
         </div>
         <div className={`w-10 h-10 rounded-lg ${iconBg} flex items-center justify-center`}>
           {icon}
         </div>
       </div>
-      <p className="text-sm text-muted-foreground leading-relaxed">{detail}</p>
-      <p className="mt-3 text-xs text-muted-foreground/70 italic">Source: {source}</p>
+      <p className={`text-sm leading-relaxed ${dark ? "text-white/70" : "text-muted-foreground"}`}>{detail}</p>
+      <p className={`mt-3 text-xs italic ${dark ? "text-white/40" : "text-muted-foreground/70"}`}>Source: {source}</p>
     </div>
   );
 }

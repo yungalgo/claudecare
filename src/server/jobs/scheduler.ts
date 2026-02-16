@@ -46,7 +46,7 @@ export async function scheduleNextCall(boss: PgBoss): Promise<boolean> {
     .limit(1);
 
   if (!person) {
-    console.log("[scheduler] No persons due for calls");
+    console.log("[scheduler] No people due for calls");
     return false;
   }
 

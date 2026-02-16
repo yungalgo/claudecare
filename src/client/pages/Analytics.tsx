@@ -220,7 +220,7 @@ export function Analytics() {
               </div>
             ) : (
               <div className="h-[180px] flex items-center justify-center text-sm text-muted-foreground">
-                No persons enrolled
+                No people enrolled
               </div>
             )}
           </CardContent>
