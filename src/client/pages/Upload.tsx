@@ -80,6 +80,18 @@ export function Upload() {
         <p className="text-muted-foreground text-sm mt-1">
           Upload a CSV file with columns: name, phone, emergency_contact_name, emergency_contact_phone, pcp_name, pcp_phone, notes
         </p>
+        <a
+          href="/sample-persons.csv"
+          download="sample-persons.csv"
+          className="inline-flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 font-medium transition-colors mt-2"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          Download sample template
+        </a>
       </div>
 
       {/* Drop zone */}

@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { Link } from "react-router";
+import { toast } from "sonner";
 import { api } from "../lib/api.ts";
 import { Card, CardContent, Input, Badge, FlagBadge, Button, Spinner, EmptyState } from "../components/ui.tsx";
 
@@ -135,17 +136,19 @@ function DemoCallCard({ onCallComplete }: { onCallComplete: () => void }) {
                   disabled={isActive}
                   className={`h-11 ${phoneError ? "border-danger focus:ring-danger/20 focus:border-danger" : ""}`}
                 />
-                {phoneError && <p className="text-xs text-danger mt-1">{phoneError}</p>}
+                <p className={`text-xs mt-1 h-4 ${phoneError ? "text-danger" : "invisible"}`}>
+                  {phoneError || "\u00A0"}
+                </p>
               </div>
 
               <div>
                 <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Call type</label>
-                <div className="flex rounded-[var(--radius)] border border-border overflow-hidden h-11">
+                <div className="flex rounded-[var(--radius)] border border-border overflow-hidden h-11 w-[240px]">
                   <button
                     type="button"
                     onClick={() => setCallType("standard")}
                     disabled={isActive}
-                    className={`px-4 text-sm font-medium transition-colors cursor-pointer ${
+                    className={`flex-1 text-sm font-medium transition-colors cursor-pointer ${
                       callType === "standard"
                         ? "bg-primary text-primary-foreground"
                         : "bg-card text-muted-foreground hover:bg-muted"
@@ -157,7 +160,7 @@ function DemoCallCard({ onCallComplete }: { onCallComplete: () => void }) {
                     type="button"
                     onClick={() => setCallType("comprehensive")}
                     disabled={isActive}
-                    className={`px-4 text-sm font-medium transition-colors border-l border-border cursor-pointer ${
+                    className={`flex-1 text-sm font-medium transition-colors border-l border-border cursor-pointer ${
                       callType === "comprehensive"
                         ? "bg-primary text-primary-foreground"
                         : "bg-card text-muted-foreground hover:bg-muted"
@@ -186,27 +189,29 @@ function DemoCallCard({ onCallComplete }: { onCallComplete: () => void }) {
             </div>
           </div>
 
-          {/* Status indicator */}
-          {status !== "idle" && (
-            <div className="mt-4 ml-[46px]">
-              {error ? (
-                <div className="flex items-center gap-2 text-sm text-danger">
-                  <span className="w-2 h-2 rounded-full bg-danger" />
-                  {error}
-                </div>
-              ) : (
-                <div className="flex items-center gap-3">
-                  <DemoStatusStep label="Creating" active={status === "creating"} done={status !== "creating"} />
-                  <StepArrow />
-                  <DemoStatusStep label="Dialing" active={status === "dialing"} done={status === "in-progress" || status === "completed"} />
-                  <StepArrow />
-                  <DemoStatusStep label="In Progress" active={status === "in-progress"} done={status === "completed"} />
-                  <StepArrow />
-                  <DemoStatusStep label="Completed" active={false} done={status === "completed"} />
-                </div>
-              )}
-            </div>
-          )}
+          {/* Status indicator (fixed height to prevent layout shift) */}
+          <div className="mt-4 ml-[46px] min-h-[28px]">
+            {status !== "idle" && (
+              <>
+                {error ? (
+                  <div className="inline-flex items-center gap-2.5 px-3.5 py-2 rounded-lg bg-danger-light border border-danger/20">
+                    <span className="w-2 h-2 rounded-full bg-danger shrink-0" />
+                    <span className="text-sm text-danger font-medium">{error}</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <DemoStatusStep label="Creating" active={status === "creating"} done={status !== "creating"} />
+                    <StepArrow />
+                    <DemoStatusStep label="Dialing" active={status === "dialing"} done={status === "in-progress" || status === "completed"} />
+                    <StepArrow />
+                    <DemoStatusStep label="In Progress" active={status === "in-progress"} done={status === "completed"} />
+                    <StepArrow />
+                    <DemoStatusStep label="Completed" active={false} done={status === "completed"} />
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>
@@ -240,6 +245,113 @@ function StepArrow() {
   );
 }
 
+interface ActiveCall {
+  id: string;
+  personId: string;
+  personName: string;
+  status: string;
+  callType: string;
+  startedAt: string | null;
+  createdAt: string;
+}
+
+function CallerStatus() {
+  const [activeCalls, setActiveCalls] = useState<ActiveCall[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function poll() {
+      try {
+        const data = await api.get<ActiveCall[]>("/calls/active");
+        if (!cancelled) {
+          setActiveCalls(data);
+          setLoaded(true);
+        }
+      } catch {
+        if (!cancelled) setLoaded(true);
+      }
+    }
+    poll();
+    const interval = setInterval(poll, 5000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, []);
+
+  if (!loaded) return null;
+
+  if (activeCalls.length === 0) {
+    return (
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
+              <PhoneOutIcon className="w-4.5 h-4.5 text-muted-foreground" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Caller Idle</p>
+              <p className="text-xs text-muted-foreground/60">No active calls right now</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="border-primary/20 bg-primary-light/30">
+      <CardContent className="p-4">
+        <div className="flex items-center gap-2.5 mb-3">
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary" />
+          </span>
+          <span className="text-sm font-semibold text-foreground">
+            {activeCalls.length} Active Call{activeCalls.length > 1 ? "s" : ""}
+          </span>
+        </div>
+        <div className="space-y-2.5">
+          {activeCalls.map((call) => (
+            <div key={call.id} className="flex items-center justify-between bg-card rounded-lg px-3.5 py-2.5 border border-border">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                  <PhoneOutIcon className="w-3.5 h-3.5 text-primary" />
+                </div>
+                <div>
+                  <Link to={`/persons/${call.personId}`} className="text-sm font-medium text-foreground hover:text-primary transition-colors">
+                    {call.personName}
+                  </Link>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Badge variant="outline">{call.callType}</Badge>
+                    <span className="capitalize">{call.status.replace("-", " ")}</span>
+                  </div>
+                </div>
+              </div>
+              {call.startedAt && <ElapsedTime startedAt={call.startedAt} />}
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ElapsedTime({ startedAt }: { startedAt: string }) {
+  const [elapsed, setElapsed] = useState("");
+  useEffect(() => {
+    function update() {
+      const seconds = Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000);
+      if (seconds < 0) { setElapsed("0:00"); return; }
+      const m = Math.floor(seconds / 60);
+      const s = seconds % 60;
+      setElapsed(`${m}:${String(s).padStart(2, "0")}`);
+    }
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [startedAt]);
+  return <span className="text-sm font-mono text-muted-foreground tabular-nums">{elapsed}</span>;
+}
+
 function PhoneOutIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -252,6 +364,21 @@ export function Dashboard() {
   const [persons, setPersons] = useState<PersonRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [seeding, setSeeding] = useState(false);
+
+  async function handleSeed() {
+    if (!confirm("This will replace all existing persons with demo data. Continue?")) return;
+    setSeeding(true);
+    try {
+      const result = await api.post<{ persons: number; calls: number; assessments: number; escalations: number }>("/seed", {});
+      toast.success(`Seeded ${result.persons} persons, ${result.calls} calls, ${result.assessments} assessments`);
+      loadPersons();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Seed failed");
+    } finally {
+      setSeeding(false);
+    }
+  }
 
   useEffect(() => {
     loadPersons();
@@ -289,15 +416,23 @@ export function Dashboard() {
             Overview of all enrolled persons and their current status.
           </p>
         </div>
-        <Link to="/upload">
-          <Button>
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-            Upload CSV
+        <div className="flex items-center gap-3">
+          <Button variant="outline" onClick={handleSeed} disabled={seeding}>
+            {seeding ? "Populating..." : "Populate Demo Data"}
           </Button>
-        </Link>
+          <Link to="/upload">
+            <Button>
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              Upload CSV
+            </Button>
+          </Link>
+        </div>
       </div>
+
+      {/* Caller Status */}
+      <CallerStatus />
 
       {/* Demo Call Card */}
       <DemoCallCard onCallComplete={loadPersons} />

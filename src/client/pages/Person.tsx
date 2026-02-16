@@ -61,10 +61,10 @@ interface EscalationData {
 
 const chartColors = {
   Meals: "#2F855A",
-  Sleep: "#2563EB",
+  Sleep: "#3B82A0",
   Health: "#0D756E",
-  Social: "#D69E2E",
-  Mobility: "#7C3AED",
+  Social: "#D4A853",
+  Mobility: "#E07A5F",
 };
 
 export function Person() {
