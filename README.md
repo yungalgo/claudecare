@@ -1,6 +1,8 @@
-# ClaudeCare
+# Claude Care
 
-AI-powered wellness monitoring for isolated seniors. Automated phone calls run validated clinical screenings through warm, natural conversation — catching risks early and alerting care teams when someone needs help.
+**[claudecare.com](https://claudecare.com)**
+
+AI-powered wellness monitoring for isolated seniors. Automated phone calls run validated clinical screenings through warm, natural conversation, catching risks early and alerting care teams when someone needs help.
 
 Built for organizations that serve older adults: senior living facilities, home health agencies, Area Agencies on Aging.
 
