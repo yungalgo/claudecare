@@ -1,7 +1,8 @@
 import { PgBoss } from "pg-boss";
-import { scheduleCallBatches } from "./scheduler.ts";
+import { scheduleNextCall } from "./scheduler.ts";
 import { processCall } from "./call-processor.ts";
 import { processPostCall } from "./post-call.ts";
+import { env } from "../env.ts";
 
 let boss: PgBoss | null = null;
 
@@ -24,12 +25,17 @@ export async function startWorkers() {
   await b.createQueue("schedule-calls");
   await b.createQueue("process-call");
   await b.createQueue("post-call");
+  await b.createQueue("process-next-call");
 
-  // Cron: schedule daily call batches at 9 AM
-  await b.schedule("schedule-calls", "0 9 * * *");
+  // Parse cron from CALL_WINDOW_START (e.g. "09:00" → "0 9 * * *")
+  const [hour, minute] = env.CALL_WINDOW_START.split(":").map(Number);
+  const cronExpression = `${minute} ${hour} * * *`;
+
+  // Cron: schedule daily call window start
+  await b.schedule("schedule-calls", cronExpression);
   await b.work("schedule-calls", async () => {
-    console.log("[job:schedule-calls] Running daily call scheduler");
-    await scheduleCallBatches(b);
+    console.log("[job:schedule-calls] Starting daily call window");
+    await scheduleNextCall(b);
   });
 
   // Process individual calls
@@ -40,10 +46,23 @@ export async function startWorkers() {
   });
 
   // Post-call processing (scoring, flagging, escalation)
+  // After finishing, queues process-next-call with delay
   await b.work("post-call", async (job) => {
     const { callId } = job.data as { callId: string };
     console.log(`[job:post-call] Processing post-call ${callId}`);
     await processPostCall(callId);
+
+    // Chain: schedule next call after gap
+    await b.send("process-next-call", {}, {
+      startAfter: env.CALL_GAP_SECONDS,
+    });
+    console.log(`[job:post-call] Queued next call in ${env.CALL_GAP_SECONDS}s`);
+  });
+
+  // Process next call in the sequential chain
+  await b.work("process-next-call", async () => {
+    console.log("[job:process-next-call] Checking for next call");
+    await scheduleNextCall(b);
   });
 
   console.log("[pg-boss] Workers registered");

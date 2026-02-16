@@ -56,6 +56,9 @@ export const verification = pgTable("verification", {
 
 export const persons = pgTable("persons", {
   id: uuid("id").defaultRandom().primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   phone: text("phone").notNull(),
   emergencyContactName: text("emergency_contact_name"),

@@ -1,10 +1,11 @@
 /**
- * Test script: Initiates a real Twilio call to TEST_PHONE_NUMBER.
+ * Test script: Triggers a real call via the running dev server.
  *
  * Usage:
- *   bun run test:call
+ *   1. Start the server: bun run dev
+ *   2. In another terminal: bun run test:call
  *
- * Requires: DATABASE_URL, TWILIO_*, ANTHROPIC_API_KEY set in .env
+ * Requires: All env vars set in .env, server running with ngrok
  */
 
 import postgres from "postgres";
@@ -12,26 +13,9 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import { eq } from "drizzle-orm";
 import * as schema from "../server/lib/schema.ts";
 import { env } from "../server/env.ts";
-import Twilio from "twilio";
 
 const TEST_PHONE = process.env.TEST_PHONE_NUMBER ?? "+19083363673";
-
-// ── Validate required env vars (loud failures) ───────────────────────
-const required = {
-  DATABASE_URL: env.DATABASE_URL,
-  TWILIO_ACCOUNT_SID: env.TWILIO_ACCOUNT_SID,
-  TWILIO_AUTH_TOKEN: env.TWILIO_AUTH_TOKEN,
-  TWILIO_PHONE_NUMBER: env.TWILIO_PHONE_NUMBER,
-  ANTHROPIC_API_KEY: env.ANTHROPIC_API_KEY,
-  BASE_URL: env.BASE_URL,
-} as const;
-
-for (const [key, value] of Object.entries(required)) {
-  if (!value) {
-    console.error(`FATAL: ${key} is not set. Cannot run test call.`);
-    process.exit(1);
-  }
-}
+const serverUrl = `http://localhost:${env.PORT}`;
 
 // ── Connect to database ──────────────────────────────────────────────
 const driver = postgres(env.DATABASE_URL);
@@ -43,12 +27,35 @@ async function main() {
   console.log("╚══════════════════════════════════════════╝");
   console.log();
   console.log(`  Phone:    ${TEST_PHONE}`);
-  console.log(`  Base URL: ${env.BASE_URL}`);
+  console.log(`  Server:   ${serverUrl}`);
   console.log(`  Twilio #: ${env.TWILIO_PHONE_NUMBER}`);
   console.log();
 
-  // ── Step 1: Upsert test person ───────────────────────────────────
-  console.log("[1/4] Finding or creating test person...");
+  // ── Step 1: Ensure a user exists ─────────────────────────────────
+  console.log("[1/3] Ensuring test user exists...");
+
+  let [testUser] = await db
+    .select()
+    .from(schema.user)
+    .where(eq(schema.user.email, "test@claudecare.com"));
+
+  if (!testUser) {
+    [testUser] = await db
+      .insert(schema.user)
+      .values({
+        id: "test-user-id",
+        name: "Test Admin",
+        email: "test@claudecare.com",
+        emailVerified: true,
+      })
+      .returning();
+    console.log(`  Created test user: ${testUser!.id}`);
+  } else {
+    console.log(`  Found test user: ${testUser.id}`);
+  }
+
+  // ── Step 2: Ensure test person exists ────────────────────────────
+  console.log("[2/3] Ensuring test person exists...");
 
   let [person] = await db
     .select()
@@ -59,6 +66,7 @@ async function main() {
     [person] = await db
       .insert(schema.persons)
       .values({
+        userId: testUser!.id,
         name: "Test User",
         phone: TEST_PHONE,
         status: "active",
@@ -68,76 +76,44 @@ async function main() {
       .returning();
     console.log(`  Created test person: ${person!.id}`);
   } else {
-    // Ensure the person is active
-    if (person.status !== "active") {
+    if (person.status !== "active" || person.userId !== testUser!.id) {
       await db
         .update(schema.persons)
-        .set({ status: "active" })
+        .set({ status: "active", userId: testUser!.id })
         .where(eq(schema.persons.id, person.id));
-      console.log(`  Reactivated test person: ${person.id}`);
-    } else {
-      console.log(`  Found existing test person: ${person.id} (${person.name})`);
     }
+    console.log(`  Found test person: ${person.id} (${person.name})`);
   }
 
-  // ── Step 2: Create call record ───────────────────────────────────
-  console.log("[2/4] Creating call record...");
+  // ── Step 3: Trigger call via dev endpoint ────────────────────────
+  console.log("[3/3] Triggering call...");
 
-  const [call] = await db
-    .insert(schema.calls)
-    .values({
-      personId: person!.id,
-      callType: "weekly",
-      status: "scheduled",
-      scheduledFor: new Date(),
-    })
-    .returning();
-
-  console.log(`  Call ID: ${call!.id}`);
-
-  // ── Step 3: Initiate Twilio call ─────────────────────────────────
-  console.log("[3/4] Initiating Twilio call...");
-
-  const client = Twilio(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN);
-
-  const voiceUrl = `${env.BASE_URL}/api/twilio/voice/answer?personId=${person!.id}&callSid=${call!.id}`;
-  const statusUrl = `${env.BASE_URL}/api/twilio/status`;
-  const recordingUrl = `${env.BASE_URL}/api/twilio/recording`;
-
-  console.log(`  Voice URL: ${voiceUrl}`);
-
-  const twilioCall = await client.calls.create({
-    to: TEST_PHONE,
-    from: env.TWILIO_PHONE_NUMBER,
-    url: voiceUrl,
-    statusCallback: statusUrl,
-    statusCallbackEvent: ["initiated", "ringing", "answered", "completed"],
-    record: true,
-    recordingStatusCallback: recordingUrl,
+  const res = await fetch(`${serverUrl}/api/dev/trigger-call`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ personId: person!.id }),
   });
 
-  // Update call record with Twilio SID
-  await db
-    .update(schema.calls)
-    .set({ callSid: twilioCall.sid, status: "in-progress" })
-    .where(eq(schema.calls.id, call!.id));
+  if (!res.ok) {
+    const err = await res.text();
+    console.error(`  FATAL: Server returned ${res.status}: ${err}`);
+    console.error("  Is the server running? (bun run dev)");
+    await driver.end();
+    process.exit(1);
+  }
 
-  console.log(`  Twilio SID: ${twilioCall.sid}`);
-
-  // ── Step 4: Done ─────────────────────────────────────────────────
-  console.log("[4/4] Call initiated successfully!");
+  const call = (await res.json()) as { id: string };
+  console.log(`  Call ID: ${call.id}`);
   console.log();
   console.log("  Your phone should ring momentarily.");
-  console.log("  The server must be running (bun run dev) to handle the WebSocket.");
-  console.log();
-  console.log(`  Monitor logs with: bun run dev`);
-  console.log(`  Check call status: GET /api/calls/${call!.id}`);
+  console.log("  Watch the server logs for WS/Claude activity.");
 
   await driver.end();
   process.exit(0);
 }
 
-main().catch((err) => {
+main().catch(async (err) => {
   console.error("FATAL:", err);
+  await driver.end();
   process.exit(1);
 });

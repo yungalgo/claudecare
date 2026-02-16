@@ -26,9 +26,9 @@ export async function createEscalation(input: CreateEscalationInput) {
 
   console.log(`[escalation] Created ${input.tier} escalation for person ${input.personId}: ${input.reason}`);
 
-  // Get the person's name for the email
+  // Get the person's name and owning user
   const [person] = await db
-    .select({ name: schema.persons.name })
+    .select({ name: schema.persons.name, userId: schema.persons.userId })
     .from(schema.persons)
     .where(eq(schema.persons.id, input.personId));
 
@@ -36,17 +36,23 @@ export async function createEscalation(input: CreateEscalationInput) {
 
   // Send email alerts for immediate and urgent escalations
   if (input.tier === "immediate" || input.tier === "urgent") {
-    // Notify all registered users (care coordinators)
-    const users = await db.select({ email: schema.user.email }).from(schema.user);
-    const emails = users.map((u) => u.email);
+    if (person?.userId) {
+      // Email only the owning user, not all users
+      const [owner] = await db
+        .select({ email: schema.user.email })
+        .from(schema.user)
+        .where(eq(schema.user.id, person.userId));
 
-    await sendEscalationAlert(emails, {
-      personName,
-      tier: input.tier,
-      reason: input.reason,
-      details: input.details,
-      dashboardUrl: `${env.BASE_URL}/persons/${input.personId}`,
-    });
+      if (owner) {
+        await sendEscalationAlert([owner.email], {
+          personName,
+          tier: input.tier,
+          reason: input.reason,
+          details: input.details,
+          dashboardUrl: `${env.BASE_URL}/persons/${input.personId}`,
+        });
+      }
+    }
   }
 
   if (input.tier === "immediate") {

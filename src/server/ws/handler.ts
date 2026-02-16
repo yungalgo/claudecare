@@ -13,57 +13,45 @@ import { eq } from "drizzle-orm";
 //   { type: "text", token: "..." }              (text-to-speech)
 //   { type: "end" }                             (hang up)
 
+interface WsData {
+  personId: string;
+  callId: string;
+}
+
+// Track ws → callSid for cleanup
+const wsCallSidMap = new WeakMap<ServerWebSocket<WsData>, string>();
+
 export const handleWebSocket = {
-  async open(ws: ServerWebSocket<unknown>) {
-    console.log("[ws] ConversationRelay connection opened");
+  async open(ws: ServerWebSocket<WsData>) {
+    console.log(`[ws] ConversationRelay connection opened (person=${ws.data.personId}, call=${ws.data.callId})`);
   },
 
-  async message(ws: ServerWebSocket<unknown>, msg: string | Buffer) {
+  async message(ws: ServerWebSocket<WsData>, msg: string | Buffer) {
     try {
       const data = JSON.parse(typeof msg === "string" ? msg : msg.toString());
 
       switch (data.type) {
         case "setup": {
-          // Extract params from the URL used to connect
           const callSid = data.callSid ?? "";
-          console.log(`[ws] Setup: callSid=${callSid}`);
+          const { personId, callId } = ws.data;
+          console.log(`[ws] Setup: callSid=${callSid}, personId=${personId}, callId=${callId}`);
 
-          // Look up the call to get personId
-          const url = new URL(`http://localhost${ws.data ? "" : ""}` ); // ws.data not used for now
-          // The personId was passed in the ConversationRelay URL params
-          // We'll extract from the setup event's customParameters or find via callSid
-          let personId = data.customParameters?.personId ?? "";
+          // Track callSid for cleanup on close
+          wsCallSidMap.set(ws, callSid);
+
+          // Look up person name
           let personName = "there";
-
-          if (!personId && callSid) {
-            // Try to find by callSid
-            const [call] = await db.select().from(schema.calls).where(eq(schema.calls.callSid, callSid));
-            if (call) {
-              personId = call.personId;
-              const [person] = await db.select().from(schema.persons).where(eq(schema.persons.id, personId));
-              if (person) personName = person.name;
-            }
-          } else if (personId) {
+          if (personId) {
             const [person] = await db.select().from(schema.persons).where(eq(schema.persons.id, personId));
             if (person) personName = person.name;
           }
 
-          // Find or create call record
-          let callId = "";
-          if (callSid) {
-            const [call] = await db.select().from(schema.calls).where(eq(schema.calls.callSid, callSid));
-            if (call) callId = call.id;
-          }
-
-          if (!callId && personId) {
-            const [newCall] = await db.insert(schema.calls).values({
-              personId,
-              callSid,
-              callType: "weekly",
-              status: "in-progress",
-              startedAt: new Date(),
-            }).returning();
-            callId = newCall!.id;
+          // Update call record with Twilio SID if we have one
+          if (callSid && callId) {
+            await db
+              .update(schema.calls)
+              .set({ callSid, startedAt: new Date() })
+              .where(eq(schema.calls.id, callId));
           }
 
           const session = createSession(callSid, personId, callId, personName);
@@ -74,11 +62,10 @@ export const handleWebSocket = {
         }
 
         case "prompt": {
-          // Speech-to-text result from caller
           const utterance = data.voicePrompt ?? "";
           console.log(`[ws] Caller said: "${utterance}"`);
 
-          const callSid = data.callSid ?? "";
+          const callSid = wsCallSidMap.get(ws) ?? data.callSid ?? "";
           const session = getSession(callSid);
           if (!session) {
             console.warn("[ws] No session for callSid:", callSid);
@@ -108,11 +95,15 @@ export const handleWebSocket = {
       }
     } catch (err) {
       console.error("[ws] Error:", err);
+      ws.send(JSON.stringify({ type: "text", token: "I'm sorry, I'm having a technical difficulty. Let me try again." }));
     }
   },
 
-  close(ws: ServerWebSocket<unknown>) {
-    console.log("[ws] ConversationRelay connection closed");
-    // Clean up sessions (we'd need to track which ws maps to which callSid)
+  close(ws: ServerWebSocket<WsData>) {
+    const callSid = wsCallSidMap.get(ws);
+    console.log(`[ws] ConversationRelay connection closed (callSid=${callSid})`);
+    if (callSid) {
+      deleteSession(callSid);
+    }
   },
 };
