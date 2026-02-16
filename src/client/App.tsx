@@ -15,19 +15,11 @@ import { Escalations } from "./pages/Escalations.tsx";
 import { Upload } from "./pages/Upload.tsx";
 import { Analytics } from "./pages/Analytics.tsx";
 
-function Logo({ size = "default" }: { size?: "default" | "sm" }) {
-  const s = size === "sm" ? "w-7 h-7" : "w-8 h-8";
+function Logo() {
   return (
-    <NavLink to="/dashboard" className="inline-flex items-center gap-2.5 group">
-      <div className={`${s} rounded-lg bg-primary flex items-center justify-center transition-transform group-hover:scale-105`}>
-        <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
-          <path d="M12 4v8l4 4" />
-          <circle cx="12" cy="12" r="9" strokeWidth={2} />
-        </svg>
-      </div>
-      <span className="font-display font-semibold text-foreground text-lg tracking-tight">
-        claude<span className="text-primary">care</span>
-      </span>
+    <NavLink to="/dashboard" className="inline-flex items-center gap-2 group">
+      <img src="/logogram.svg" alt="" className="w-7 h-7 transition-transform group-hover:scale-105" />
+      <img src="/logotype.svg" alt="Claude Care" className="h-4" />
     </NavLink>
   );
 }
