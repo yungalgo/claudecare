@@ -131,11 +131,11 @@ const flagConfig: Record<string, { variant: BadgeVariant; label: string; dot: st
 
 export function FlagBadge({ flag }: { flag: string | null | undefined }) {
   const f = flag ?? "green";
-  const config = flagConfig[f] ?? flagConfig.green;
+  const config = flagConfig[f] ?? flagConfig.green!;
   return (
-    <Badge variant={config.variant}>
-      <span className={`w-1.5 h-1.5 rounded-full ${config.dot} mr-1.5`} />
-      {config.label}
+    <Badge variant={config!.variant}>
+      <span className={`w-1.5 h-1.5 rounded-full ${config!.dot} mr-1.5`} />
+      {config!.label}
     </Badge>
   );
 }
@@ -148,10 +148,10 @@ const tierConfig: Record<string, { variant: BadgeVariant; icon: string }> = {
 };
 
 export function TierBadge({ tier }: { tier: string }) {
-  const config = tierConfig[tier] ?? tierConfig.routine;
+  const config = tierConfig[tier] ?? tierConfig.routine!;
   return (
-    <Badge variant={config.variant}>
-      {config.icon && <span className="font-bold mr-0.5">{config.icon}</span>}
+    <Badge variant={config!.variant}>
+      {config!.icon && <span className="font-bold mr-0.5">{config!.icon}</span>}
       {tier.charAt(0).toUpperCase() + tier.slice(1)}
     </Badge>
   );

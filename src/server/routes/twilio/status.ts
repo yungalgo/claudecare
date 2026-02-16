@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { db, schema } from "../../lib/db.ts";
 import { eq } from "drizzle-orm";
-import { getBoss } from "../../jobs/boss.ts";
+import { processPostCall } from "../../jobs/post-call.ts";
 import { twilioSignatureMiddleware } from "../../lib/twilio.ts";
 
 type TwilioVars = { Variables: { twilioBody: Record<string, string> } };
@@ -51,7 +51,7 @@ twilioStatusRoutes.post("/", async (c) => {
     .set(updateData)
     .where(eq(schema.calls.callSid, callSid));
 
-  // Wire up post-call job when call completes
+  // Run post-call processing directly when call completes
   if (callStatus === "completed") {
     const [call] = await db
       .select({ id: schema.calls.id })
@@ -59,9 +59,10 @@ twilioStatusRoutes.post("/", async (c) => {
       .where(eq(schema.calls.callSid, callSid));
 
     if (call) {
-      const boss = await getBoss();
-      await boss.send("post-call", { callId: call.id });
-      console.log(`[twilio:status] Queued post-call job for call ${call.id}`);
+      // Run post-call inline (don't rely on pg-boss for this critical path)
+      processPostCall(call.id).catch((err) =>
+        console.error(`[twilio:status] Post-call processing failed:`, err),
+      );
     }
   }
 

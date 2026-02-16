@@ -2,12 +2,16 @@ import { anthropic, CALL_SYSTEM_PROMPT, ASSESSMENT_TOOL } from "../lib/claude.ts
 import { db, schema } from "../lib/db.ts";
 import { eq, and, sql } from "drizzle-orm";
 
+// Haiku for real-time conversation (low latency matters most)
+// Sonnet for final assessment (accuracy matters, not latency)
+const CONVERSATION_MODEL = "claude-haiku-4-5-20251001";
+const ASSESSMENT_MODEL = "claude-sonnet-4-5-20250929";
+
 interface ConversationState {
   personId: string;
   callId: string;
   personName: string;
   messages: Array<{ role: "user" | "assistant"; content: string }>;
-  transcript: string[];
 }
 
 const sessions = new Map<string, ConversationState>();
@@ -18,7 +22,6 @@ export function createSession(callSid: string, personId: string, callId: string,
     callId,
     personName,
     messages: [],
-    transcript: [],
   };
   sessions.set(callSid, state);
   return state;
@@ -29,52 +32,68 @@ export function getSession(callSid: string) {
 }
 
 export function deleteSession(callSid: string) {
-  sessions.delete(callSid);
+  return sessions.delete(callSid);
+}
+
+/**
+ * Update lastCallAt on WS close (even for incomplete calls).
+ * Transcript is provided by Twilio Intelligence via webhook.
+ */
+export async function saveTranscript(callSid: string) {
+  const state = sessions.get(callSid);
+  if (!state) return;
+
+  await db
+    .update(schema.persons)
+    .set({ lastCallAt: new Date() })
+    .where(eq(schema.persons.id, state.personId));
+
+  console.log(`[protocol] Call closed for ${state.callId}`);
 }
 
 // Get the opening message from Claude
 export async function getGreeting(state: ConversationState): Promise<string> {
   const response = await anthropic.messages.create({
-    model: "claude-opus-4-6",
-    max_tokens: 300,
-    system: CALL_SYSTEM_PROMPT + `\n\nYou are calling ${state.personName}. This is the START of the call. Deliver your opening greeting.`,
+    model: CONVERSATION_MODEL,
+    max_tokens: 200,
+    system: CALL_SYSTEM_PROMPT + `\n\nYou are calling ${state.personName}. This is the START of the call. Deliver your opening greeting. Keep it brief — 1-2 sentences max.`,
     messages: [{ role: "user", content: "[Call connected. Deliver your opening greeting.]" }],
   });
 
   const text = response.content[0]?.type === "text" ? response.content[0].text : "Hello, how are you?";
   state.messages.push({ role: "assistant", content: text });
-  state.transcript.push(`claudecare: ${text}`);
   return text;
 }
 
 // Process a speech input from the caller and get Claude's response
-export async function processUtterance(state: ConversationState, utterance: string): Promise<string> {
+// Returns { text, endCall } — endCall is true after assessment submission (call is done)
+export async function processUtterance(state: ConversationState, utterance: string): Promise<{ text: string; endCall: boolean }> {
   state.messages.push({ role: "user", content: utterance });
-  state.transcript.push(`${state.personName}: ${utterance}`);
 
   const response = await anthropic.messages.create({
-    model: "claude-opus-4-6",
-    max_tokens: 500,
-    system: CALL_SYSTEM_PROMPT + `\n\nYou are calling ${state.personName}. Continue the conversation naturally following the protocol phases.`,
+    model: CONVERSATION_MODEL,
+    max_tokens: 300,
+    system: CALL_SYSTEM_PROMPT + `\n\nYou are calling ${state.personName}. Continue the conversation naturally following the protocol phases. Keep responses concise — this is a phone call, not a letter. 2-3 sentences max per turn.`,
     messages: state.messages,
     tools: [ASSESSMENT_TOOL],
   });
 
   let text = "";
+  let endCall = false;
   for (const block of response.content) {
     if (block.type === "text") {
       text += block.text;
     } else if (block.type === "tool_use" && block.name === "submit_assessment") {
       await handleAssessmentSubmission(state, block.input as Record<string, unknown>);
+      endCall = true;
     }
   }
 
   if (text) {
     state.messages.push({ role: "assistant", content: text });
-    state.transcript.push(`claudecare: ${text}`);
   }
 
-  return text;
+  return { text, endCall };
 }
 
 /**
@@ -100,13 +119,10 @@ async function handleAssessmentSubmission(state: ConversationState, input: Recor
     flag: input.flag as string,
   });
 
-  // Update call with summary and transcript
+  // Update call with summary
   await db
     .update(schema.calls)
-    .set({
-      summary: input.summary as string,
-      transcript: state.transcript.join("\n"),
-    })
+    .set({ summary: input.summary as string })
     .where(eq(schema.calls.id, state.callId));
 
   // Update person lastCallAt and callCount (completed calls only)
@@ -124,7 +140,7 @@ async function handleAssessmentSubmission(state: ConversationState, input: Recor
     .update(schema.persons)
     .set({
       lastCallAt: new Date(),
-      callCount: (countResult?.count ?? 0) + 1, // +1 for current call not yet marked completed
+      callCount: (countResult?.count ?? 0) + 1,
     })
     .where(eq(schema.persons.id, state.personId));
 }

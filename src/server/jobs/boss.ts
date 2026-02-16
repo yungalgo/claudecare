@@ -39,16 +39,16 @@ export async function startWorkers() {
   });
 
   // Process individual calls
-  await b.work("process-call", async (job) => {
-    const { callId } = job.data as { callId: string };
+  await b.work("process-call", async ([job]) => {
+    const { callId } = job!.data as { callId: string };
     console.log(`[job:process-call] Processing call ${callId}`);
     await processCall(callId);
   });
 
   // Post-call processing (scoring, flagging, escalation)
   // After finishing, queues process-next-call with delay
-  await b.work("post-call", async (job) => {
-    const { callId } = job.data as { callId: string };
+  await b.work("post-call", async ([job]) => {
+    const { callId } = job!.data as { callId: string };
     console.log(`[job:post-call] Processing post-call ${callId}`);
     await processPostCall(callId);
 

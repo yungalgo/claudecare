@@ -1,5 +1,5 @@
 import type { ServerWebSocket } from "bun";
-import { createSession, getSession, deleteSession, getGreeting, processUtterance } from "./protocol.ts";
+import { createSession, getSession, deleteSession, saveTranscript, getGreeting, processUtterance } from "./protocol.ts";
 import { db, schema } from "../lib/db.ts";
 import { eq } from "drizzle-orm";
 
@@ -55,15 +55,19 @@ export const handleWebSocket = {
           }
 
           const session = createSession(callSid, personId, callId, personName);
+          const t0 = performance.now();
           const greeting = await getGreeting(session);
+          const greetLatency = Math.round(performance.now() - t0);
 
+          console.log(`[ws] Bot (${greetLatency}ms): "${greeting.substring(0, 80)}..."`);
           ws.send(JSON.stringify({ type: "text", token: greeting }));
           break;
         }
 
         case "prompt": {
+          const t0 = performance.now();
           const utterance = data.voicePrompt ?? "";
-          console.log(`[ws] Caller said: "${utterance}"`);
+          console.log(`[ws] Caller: "${utterance}"`);
 
           const callSid = wsCallSidMap.get(ws) ?? data.callSid ?? "";
           const session = getSession(callSid);
@@ -72,15 +76,24 @@ export const handleWebSocket = {
             break;
           }
 
-          const response = await processUtterance(session, utterance);
+          const { text: response, endCall } = await processUtterance(session, utterance);
+          const latencyMs = Math.round(performance.now() - t0);
           if (response) {
+            console.log(`[ws] Bot (${latencyMs}ms): "${response.substring(0, 80)}..."`);
             ws.send(JSON.stringify({ type: "text", token: response }));
+          }
+          if (endCall) {
+            // Give TTS time to finish the closing message, then hang up
+            setTimeout(() => {
+              console.log("[ws] Ending call after assessment submission");
+              ws.send(JSON.stringify({ type: "end" }));
+            }, 8000);
           }
           break;
         }
 
         case "interrupt": {
-          console.log("[ws] Caller interrupted");
+          // Don't log every interrupt — they're noisy
           break;
         }
 
@@ -99,10 +112,14 @@ export const handleWebSocket = {
     }
   },
 
-  close(ws: ServerWebSocket<WsData>) {
+  async close(ws: ServerWebSocket<WsData>) {
     const callSid = wsCallSidMap.get(ws);
     console.log(`[ws] ConversationRelay connection closed (callSid=${callSid})`);
     if (callSid) {
+      // Save transcript before deleting session (even for incomplete calls)
+      await saveTranscript(callSid).catch((err) =>
+        console.error(`[ws] Failed to save transcript:`, err),
+      );
       deleteSession(callSid);
     }
   },

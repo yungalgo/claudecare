@@ -14,6 +14,12 @@ analyticsRoutes.get("/", async (c) => {
   const d7 = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const d30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
+  // Convert to ISO strings for use in sql`` template literals
+  const h24s = h24.toISOString();
+  const h48s = h48.toISOString();
+  const d7s = d7.toISOString();
+  const d30s = d30.toISOString();
+
   // All person IDs for this user
   const userPersons = db
     .select({ id: schema.persons.id })
@@ -25,9 +31,9 @@ analyticsRoutes.get("/", async (c) => {
     .select({
       total: count(),
       completed: sql<number>`count(*) filter (where ${schema.calls.status} = 'completed')`,
-      last24h: sql<number>`count(*) filter (where ${schema.calls.createdAt} >= ${h24})`,
-      last48h: sql<number>`count(*) filter (where ${schema.calls.createdAt} >= ${h48})`,
-      last7d: sql<number>`count(*) filter (where ${schema.calls.createdAt} >= ${d7})`,
+      last24h: sql<number>`count(*) filter (where ${schema.calls.createdAt} >= ${h24s}::timestamptz)`,
+      last48h: sql<number>`count(*) filter (where ${schema.calls.createdAt} >= ${h48s}::timestamptz)`,
+      last7d: sql<number>`count(*) filter (where ${schema.calls.createdAt} >= ${d7s}::timestamptz)`,
     })
     .from(schema.calls)
     .where(sql`${schema.calls.personId} in (${userPersons})`);
@@ -40,8 +46,8 @@ analyticsRoutes.get("/", async (c) => {
   // --- Average duration ---
   const [avgDuration] = await db
     .select({
-      avg7d: sql<number>`avg(${schema.calls.duration}) filter (where ${schema.calls.completedAt} >= ${d7})`,
-      avg30d: sql<number>`avg(${schema.calls.duration}) filter (where ${schema.calls.completedAt} >= ${d30})`,
+      avg7d: sql<number>`avg(${schema.calls.duration}) filter (where ${schema.calls.completedAt} >= ${d7s}::timestamptz)`,
+      avg30d: sql<number>`avg(${schema.calls.duration}) filter (where ${schema.calls.completedAt} >= ${d30s}::timestamptz)`,
     })
     .from(schema.calls)
     .where(
@@ -54,9 +60,9 @@ analyticsRoutes.get("/", async (c) => {
   // --- Persons called ---
   const [personsCalled] = await db
     .select({
-      last24h: sql<number>`count(distinct ${schema.calls.personId}) filter (where ${schema.calls.createdAt} >= ${h24})`,
-      last48h: sql<number>`count(distinct ${schema.calls.personId}) filter (where ${schema.calls.createdAt} >= ${h48})`,
-      last7d: sql<number>`count(distinct ${schema.calls.personId}) filter (where ${schema.calls.createdAt} >= ${d7})`,
+      last24h: sql<number>`count(distinct ${schema.calls.personId}) filter (where ${schema.calls.createdAt} >= ${h24s}::timestamptz)`,
+      last48h: sql<number>`count(distinct ${schema.calls.personId}) filter (where ${schema.calls.createdAt} >= ${h48s}::timestamptz)`,
+      last7d: sql<number>`count(distinct ${schema.calls.personId}) filter (where ${schema.calls.createdAt} >= ${d7s}::timestamptz)`,
     })
     .from(schema.calls)
     .where(sql`${schema.calls.personId} in (${userPersons})`);

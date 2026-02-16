@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { db, schema } from "../lib/db.ts";
 import { eq, desc, and } from "drizzle-orm";
 import { getBoss } from "../jobs/boss.ts";
+import { env } from "../env.ts";
 import type { AppVariables } from "../types.ts";
 
 export const callRoutes = new Hono<{ Variables: AppVariables }>();
@@ -60,6 +61,42 @@ callRoutes.get("/:id", async (c) => {
   return c.json(result.call);
 });
 
+// Stream recording audio — proxies from Twilio with server-side auth
+callRoutes.get("/:id/recording", async (c) => {
+  const userId = c.get("userId");
+  const id = c.req.param("id");
+
+  const [result] = await db
+    .select({ call: schema.calls })
+    .from(schema.calls)
+    .innerJoin(schema.persons, eq(schema.calls.personId, schema.persons.id))
+    .where(and(eq(schema.calls.id, id), eq(schema.persons.userId, userId)));
+
+  if (!result?.call.recordingUrl) {
+    return c.json({ error: "Recording not found" }, 404);
+  }
+
+  // Twilio recording URL — append .mp3 for compressed audio
+  const twilioUrl = result.call.recordingUrl + ".mp3";
+  const auth = Buffer.from(`${env.TWILIO_ACCOUNT_SID}:${env.TWILIO_AUTH_TOKEN}`).toString("base64");
+
+  const upstream = await fetch(twilioUrl, {
+    headers: { Authorization: `Basic ${auth}` },
+  });
+
+  if (!upstream.ok) {
+    return c.json({ error: "Failed to fetch recording" }, 502);
+  }
+
+  return new Response(upstream.body, {
+    headers: {
+      "Content-Type": "audio/mpeg",
+      "Content-Length": upstream.headers.get("Content-Length") ?? "",
+      "Cache-Control": "private, max-age=3600",
+    },
+  });
+});
+
 // Trigger manual call for a person — ownership check
 callRoutes.post("/trigger", async (c) => {
   const userId = c.get("userId");
@@ -82,7 +119,7 @@ callRoutes.post("/trigger", async (c) => {
 
   // Queue Twilio call via pg-boss
   const boss = await getBoss();
-  await boss.send("process-call", { callId: call.id });
+  await boss.send("process-call", { callId: call!.id });
 
   return c.json(call, 201);
 });

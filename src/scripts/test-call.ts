@@ -15,6 +15,7 @@ import * as schema from "../server/lib/schema.ts";
 import { env } from "../server/env.ts";
 
 const TEST_PHONE = process.env.TEST_PHONE_NUMBER ?? "+19083363673";
+const TEST_USER_EMAIL = process.env.TEST_USER_EMAIL ?? "hiyungalgo@gmail.com";
 const serverUrl = `http://localhost:${env.PORT}`;
 
 // ── Connect to database ──────────────────────────────────────────────
@@ -32,27 +33,20 @@ async function main() {
   console.log();
 
   // ── Step 1: Ensure a user exists ─────────────────────────────────
-  console.log("[1/3] Ensuring test user exists...");
+  console.log(`[1/3] Finding user (${TEST_USER_EMAIL})...`);
 
-  let [testUser] = await db
+  const [testUser] = await db
     .select()
     .from(schema.user)
-    .where(eq(schema.user.email, "test@claudecare.com"));
+    .where(eq(schema.user.email, TEST_USER_EMAIL));
 
   if (!testUser) {
-    [testUser] = await db
-      .insert(schema.user)
-      .values({
-        id: "test-user-id",
-        name: "Test Admin",
-        email: "test@claudecare.com",
-        emailVerified: true,
-      })
-      .returning();
-    console.log(`  Created test user: ${testUser!.id}`);
-  } else {
-    console.log(`  Found test user: ${testUser.id}`);
+    console.error(`  FATAL: User ${TEST_USER_EMAIL} not found.`);
+    console.error("  Create an account first at http://localhost:5173/signup");
+    await driver.end();
+    process.exit(1);
   }
+  console.log(`  Found user: ${testUser.id} (${testUser.name})`);
 
   // ── Step 2: Ensure test person exists ────────────────────────────
   console.log("[2/3] Ensuring test person exists...");

@@ -82,7 +82,8 @@ export const calls = pgTable("calls", {
   status: text("status").default("scheduled"), // scheduled, in-progress, completed, failed, no-answer
   duration: integer("duration"),
   recordingUrl: text("recording_url"),
-  transcript: text("transcript"),
+  enrichedTranscript: jsonb("enriched_transcript"),
+  transcriptSid: text("transcript_sid"),
   summary: text("summary"),
   scheduledFor: timestamp("scheduled_for"),
   startedAt: timestamp("started_at"),

@@ -1,6 +1,7 @@
 import { Routes, Route, NavLink, Navigate, useLocation } from "react-router";
 import { RequireAuth } from "./components/RequireAuth.tsx";
 import { RedirectIfAuth } from "./components/RedirectIfAuth.tsx";
+import { PlayerProvider } from "./components/AudioPlayer.tsx";
 import { signOut } from "./lib/auth.ts";
 import { Landing } from "./pages/Landing.tsx";
 import { Login } from "./pages/Login.tsx";
@@ -87,6 +88,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 
 export function App() {
   return (
+    <PlayerProvider>
     <Routes>
       {/* Public routes */}
       <Route path="/" element={<RedirectIfAuth><Landing /></RedirectIfAuth>} />
@@ -106,6 +108,7 @@ export function App() {
       {/* Catch-all */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </PlayerProvider>
   );
 }
 

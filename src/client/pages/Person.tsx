@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router";
 import { toast } from "sonner";
 import { api } from "../lib/api.ts";
+import { usePlayer } from "../components/AudioPlayer.tsx";
 import { Card, CardContent, CardHeader, CardTitle, Badge, FlagBadge, TierBadge, Button, Spinner, EmptyState } from "../components/ui.tsx";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
@@ -26,6 +27,7 @@ interface CallData {
   status: string;
   duration: number | null;
   summary: string | null;
+  recordingUrl: string | null;
   startedAt: string | null;
   completedAt: string | null;
   createdAt: string;
@@ -67,6 +69,7 @@ const chartColors = {
 
 export function Person() {
   const { id } = useParams<{ id: string }>();
+  const { play } = usePlayer();
   const [person, setPerson] = useState<PersonData | null>(null);
   const [calls, setCalls] = useState<CallData[]>([]);
   const [assessments, setAssessments] = useState<AssessmentData[]>([]);
@@ -260,6 +263,7 @@ export function Person() {
                     <th className="text-left p-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Type</th>
                     <th className="text-left p-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Status</th>
                     <th className="text-left p-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Duration</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Recording</th>
                     <th className="text-left p-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Summary</th>
                     <th className="text-left p-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Date</th>
                   </tr>
@@ -275,6 +279,18 @@ export function Person() {
                       </td>
                       <td className="p-4 text-muted-foreground font-mono text-xs">
                         {call.duration ? `${Math.floor(call.duration / 60)}:${String(call.duration % 60).padStart(2, "0")}` : "—"}
+                      </td>
+                      <td className="p-4">
+                        {call.recordingUrl ? (
+                          <button onClick={() => play(call.id)} className="inline-flex items-center gap-1.5 text-primary hover:text-primary/80 text-xs font-medium transition-colors cursor-pointer">
+                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                              <polygon points="5 3 19 12 5 21 5 3" />
+                            </svg>
+                            Play
+                          </button>
+                        ) : (
+                          <span className="text-muted-foreground/40">—</span>
+                        )}
                       </td>
                       <td className="p-4 text-muted-foreground truncate max-w-sm">{call.summary || "—"}</td>
                       <td className="p-4 text-muted-foreground">{new Date(call.createdAt).toLocaleString()}</td>

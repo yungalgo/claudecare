@@ -258,7 +258,7 @@ export function Analytics() {
                       fontSize: 12,
                       boxShadow: "0 4px 12px rgba(26,26,46,0.06)",
                     }}
-                    formatter={(value: number) => [value.toFixed(1), "Avg Score"]}
+                    formatter={(value) => [Number(value).toFixed(1), "Avg Score"]}
                   />
                   <Bar dataKey="score" fill="#0D756E" radius={[4, 4, 0, 0]} />
                 </BarChart>

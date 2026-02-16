@@ -11,6 +11,7 @@ import { analyticsRoutes } from "./routes/analytics.ts";
 import { twilioVoiceRoutes } from "./routes/twilio/voice.ts";
 import { twilioStatusRoutes } from "./routes/twilio/status.ts";
 import { twilioRecordingRoutes } from "./routes/twilio/recording.ts";
+import { twilioIntelligenceRoutes } from "./routes/twilio/intelligence.ts";
 import { handleWebSocket } from "./ws/handler.ts";
 import { consumeWsToken } from "./lib/twilio.ts";
 import type { AppVariables } from "./types.ts";
@@ -22,7 +23,9 @@ app.use(
   cors({
     origin: [
       env.BASE_URL,
-      ...(env.BASE_URL.includes("localhost") ? ["http://localhost:5173"] : []),
+      // Always allow localhost in dev (BASE_URL may be ngrok)
+      "http://localhost:3000",
+      "http://localhost:5173",
     ],
     credentials: true,
   }),
@@ -62,6 +65,7 @@ app.route("/api/analytics", analyticsRoutes);
 app.route("/api/twilio/voice", twilioVoiceRoutes);
 app.route("/api/twilio/status", twilioStatusRoutes);
 app.route("/api/twilio/recording", twilioRecordingRoutes);
+app.route("/api/twilio/intelligence", twilioIntelligenceRoutes);
 
 // Health check
 app.get("/api/health", (c) => c.json({ ok: true, name: "claudecare" }));
@@ -85,9 +89,9 @@ app.post("/api/dev/trigger-call", async (c) => {
     scheduledFor: new Date(),
   }).returning();
   // Call Twilio directly (skip pg-boss queue for dev)
-  console.log(`[dev] Triggering call ${call.id} for ${person.name} (${person.phone})`);
+  console.log(`[dev] Triggering call ${call!.id} for ${person.name} (${person.phone})`);
   console.log(`[dev] BASE_URL=${env.BASE_URL}`);
-  await initiateCall(call.id, person.id, person.phone);
+  await initiateCall(call!.id, person.id, person.phone);
   return c.json(call, 201);
 });
 
@@ -120,6 +124,19 @@ const server = Bun.serve({
 });
 
 console.log(`[claudecare] Server running on http://localhost:${server.port}`);
+
+// --- Sync Intelligence Service webhook URL with current BASE_URL ---
+if (env.TWILIO_INTELLIGENCE_SERVICE_SID) {
+  import("twilio").then(({ default: Twilio }) => {
+    const client = Twilio(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN);
+    const webhookUrl = `${env.BASE_URL}/api/twilio/intelligence`;
+    client.intelligence.v2
+      .services(env.TWILIO_INTELLIGENCE_SERVICE_SID!)
+      .update({ webhookUrl, webhookHttpMethod: "POST" })
+      .then(() => console.log(`[intelligence] Webhook URL set to ${webhookUrl}`))
+      .catch((err: Error) => console.warn(`[intelligence] Failed to update webhook URL: ${err.message}`));
+  });
+}
 
 // --- Start pg-boss workers (same process) ---
 // Initialized in jobs/boss.ts — imported after server starts

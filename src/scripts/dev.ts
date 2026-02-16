@@ -6,6 +6,8 @@
  *   bun run dev:local   (localhost only, no ngrok)
  */
 
+export {};
+
 const USE_NGROK = !process.argv.includes("--local");
 const PORT = process.env.PORT ?? "3000";
 

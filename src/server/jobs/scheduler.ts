@@ -1,4 +1,4 @@
-import type PgBoss from "pg-boss";
+import type { PgBoss } from "pg-boss";
 import { db, schema } from "../lib/db.ts";
 import { eq, and, lt, isNull, or, asc } from "drizzle-orm";
 import { env } from "../env.ts";

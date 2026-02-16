@@ -5,6 +5,8 @@ import { env } from "../env.ts";
 import * as schema from "./schema.ts";
 import { sendPasswordResetEmail } from "./email.ts";
 
+const isDev = env.BASE_URL.includes("localhost") || env.BASE_URL.includes("ngrok");
+
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
@@ -15,12 +17,14 @@ export const auth = betterAuth({
       verification: schema.verification,
     },
   }),
-  baseURL: env.BASE_URL,
+  // Use localhost for baseURL in dev so cookies aren't marked Secure/__Secure-
+  // (browser is on http://localhost, which rejects Secure cookies)
+  baseURL: isDev ? `http://localhost:${env.PORT}` : env.BASE_URL,
   secret: env.BETTER_AUTH_SECRET,
   trustedOrigins: [
     env.BASE_URL,
-    // Allow Vite dev server origin in development
-    ...(env.BASE_URL.includes("localhost") ? ["http://localhost:5173"] : []),
+    "http://localhost:3000",
+    "http://localhost:5173",
   ],
   emailAndPassword: {
     enabled: true,
