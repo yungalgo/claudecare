@@ -61,7 +61,7 @@ export async function twilioSignatureMiddleware(c: Context, next: Next) {
   }
   const valid = Twilio.validateRequest(env.TWILIO_AUTH_TOKEN, signature, fullUrl, params);
   if (!valid) {
-    console.warn(`[twilio] Invalid signature for ${fullUrl}`);
+    console.warn(`[twilio] Invalid signature for ${fullUrl} (BASE_URL: ${env.BASE_URL}, req.url: ${c.req.url})`);
     return c.json({ error: "Invalid Twilio signature" }, 403);
   }
   // Store parsed body so handlers don't re-parse

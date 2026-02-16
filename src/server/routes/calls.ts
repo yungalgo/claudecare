@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod/v4";
 import { db, schema } from "../lib/db.ts";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, inArray } from "drizzle-orm";
 import { getBoss } from "../jobs/boss.ts";
 import { env } from "../env.ts";
 import { CALL_TYPES } from "../lib/constants.ts";
@@ -46,6 +46,34 @@ callRoutes.get("/", async (c) => {
     .limit(100);
 
   return c.json(calls);
+});
+
+// Active calls for the current user (must be before /:id)
+callRoutes.get("/active", async (c) => {
+  const userId = c.get("userId");
+
+  const activeCalls = await db
+    .select({
+      id: schema.calls.id,
+      personId: schema.calls.personId,
+      personName: schema.persons.name,
+      status: schema.calls.status,
+      callType: schema.calls.callType,
+      startedAt: schema.calls.startedAt,
+      createdAt: schema.calls.createdAt,
+    })
+    .from(schema.calls)
+    .innerJoin(schema.persons, eq(schema.calls.personId, schema.persons.id))
+    .where(
+      and(
+        eq(schema.persons.userId, userId),
+        inArray(schema.calls.status, ["scheduled", "in-progress"]),
+      ),
+    )
+    .orderBy(desc(schema.calls.createdAt))
+    .limit(10);
+
+  return c.json(activeCalls);
 });
 
 // Get single call — ownership check

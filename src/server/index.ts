@@ -13,6 +13,7 @@ import { twilioVoiceRoutes } from "./routes/twilio/voice.ts";
 import { twilioStatusRoutes } from "./routes/twilio/status.ts";
 import { twilioRecordingRoutes } from "./routes/twilio/recording.ts";
 import { twilioIntelligenceRoutes } from "./routes/twilio/intelligence.ts";
+import { seedRoutes } from "./routes/seed.ts";
 import { handleWebSocket } from "./ws/handler.ts";
 import { consumeWsToken } from "./lib/twilio.ts";
 import type { AppVariables } from "./types.ts";
@@ -86,6 +87,7 @@ app.route("/api/twilio/voice", twilioVoiceRoutes);
 app.route("/api/twilio/status", twilioStatusRoutes);
 app.route("/api/twilio/recording", twilioRecordingRoutes);
 app.route("/api/twilio/intelligence", twilioIntelligenceRoutes);
+app.route("/api/seed", seedRoutes);
 
 // Health check
 app.get("/api/health", (c) => c.json({ ok: true, name: "claudecare" }));
