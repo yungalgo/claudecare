@@ -2,6 +2,7 @@
   "name": "claudecare",
   "type": "module",
   "private": true,
+  "packageManager": "bun@1.3.9",
   "scripts": {
     "dev": "bun src/scripts/dev.ts",
     "dev:local": "bun src/scripts/dev.ts --local",
@@ -12,6 +13,7 @@
     "start": "bun src/server/index.ts",
     "db:push": "bun drizzle-kit push",
     "db:studio": "bun drizzle-kit studio",
+    "test": "bun test",
     "test:call": "bun src/scripts/test-call.ts"
   },
   "devDependencies": {
