@@ -2,7 +2,6 @@ import { PgBoss } from "pg-boss";
 import { scheduleNextCall } from "./scheduler.ts";
 import { processCall } from "./call-processor.ts";
 import { processPostCall } from "./post-call.ts";
-import { env } from "../env.ts";
 
 let boss: PgBoss | null = null;
 
@@ -52,11 +51,9 @@ export async function startWorkers() {
     console.log(`[job:post-call] Processing post-call ${callId}`);
     await processPostCall(callId);
 
-    // Chain: schedule next call after gap
-    await b.send("process-next-call", {}, {
-      startAfter: env.CALL_GAP_SECONDS,
-    });
-    console.log(`[job:post-call] Queued next call in ${env.CALL_GAP_SECONDS}s`);
+    // Chain: schedule next call immediately
+    await b.send("process-next-call", {});
+    console.log("[job:post-call] Queued next call");
   });
 
   // Process next call in the sequential chain

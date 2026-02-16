@@ -109,7 +109,7 @@ twilioStatusRoutes.post("/", async (c) => {
         await checkConsecutiveMisses(call.personId);
         // Chain next call
         const boss = await getBoss();
-        await boss.send("process-next-call", {}, { startAfter: env.CALL_GAP_SECONDS });
+        await boss.send("process-next-call", {});
       }
     }
   }

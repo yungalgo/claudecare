@@ -14,7 +14,6 @@ const envSchema = z.object({
   CALL_WINDOW_START: z.string().default("09:00"),
   CALL_WINDOW_END: z.string().default("17:00"),
   CALL_WINDOW_TZ: z.string().default("America/New_York"),
-  CALL_GAP_SECONDS: z.coerce.number().default(10),
   // Twilio Conversational Intelligence (optional — enables enriched transcripts)
   TWILIO_INTELLIGENCE_SERVICE_SID: z.string().optional(),
 });
