@@ -19,4 +19,11 @@ const envSchema = z.object({
   TWILIO_INTELLIGENCE_SERVICE_SID: z.string().optional(),
 });
 
-export const env = envSchema.parse(process.env);
+const result = envSchema.safeParse(process.env);
+if (!result.success) {
+  const missing = result.error.issues.map((i) => i.path.join(".")).join(", ");
+  console.error(`[env] FATAL: Missing or invalid environment variables: ${missing}`);
+  console.error(result.error.issues);
+  process.exit(1);
+}
+export const env = result.data;

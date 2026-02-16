@@ -70,26 +70,34 @@ app.route("/api/twilio/intelligence", twilioIntelligenceRoutes);
 // Health check
 app.get("/api/health", (c) => c.json({ ok: true, name: "claudecare" }));
 
-// --- Dev-only: trigger call without auth (localhost only) ---
+// --- Dev-only: trigger call (localhost only, requires auth + userId scoping) ---
 app.post("/api/dev/trigger-call", async (c) => {
   const host = c.req.header("host") ?? "";
   if (!host.includes("localhost")) {
     return c.json({ error: "Dev endpoint only available on localhost" }, 403);
   }
-  const { personId } = await c.req.json();
+  // Require auth even in dev mode to enforce multi-tenancy
+  const session = await auth.api.getSession({ headers: c.req.raw.headers });
+  if (!session) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+  const userId = session.user.id;
+  const { personId, callType } = await c.req.json();
   const { db, schema } = await import("./lib/db.ts");
-  const { eq } = await import("drizzle-orm");
+  const { eq, and } = await import("drizzle-orm");
   const { initiateCall } = await import("./lib/twilio.ts");
-  const [person] = await db.select().from(schema.persons).where(eq(schema.persons.id, personId));
+  const [person] = await db.select().from(schema.persons).where(
+    and(eq(schema.persons.id, personId), eq(schema.persons.userId, userId)),
+  );
   if (!person) return c.json({ error: "Person not found" }, 404);
   const [call] = await db.insert(schema.calls).values({
     personId,
-    callType: "weekly",
+    callType: callType ?? "weekly",
     status: "scheduled",
     scheduledFor: new Date(),
   }).returning();
   // Call Twilio directly (skip pg-boss queue for dev)
-  console.log(`[dev] Triggering call ${call!.id} for ${person.name} (${person.phone})`);
+  console.log(`[dev] Triggering ${callType ?? "weekly"} call ${call!.id} for ${person.name} (${person.phone})`);
   console.log(`[dev] BASE_URL=${env.BASE_URL}`);
   await initiateCall(call!.id, person.id, person.phone);
   return c.json(call, 201);

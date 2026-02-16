@@ -3,6 +3,59 @@ import { env } from "../env.ts";
 
 export const anthropic = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
 
+// Additional protocol for quarterly calls — appended to system prompt when callType is "quarterly"
+export const QUARTERLY_PROTOCOL_EXTENSION = `
+
+## QUARTERLY INSTRUMENTS (Additional — this is a quarterly call)
+
+After Phase 5 (Ottawa 3DY) and before Phase 6 (Close), administer these four additional instruments. This will extend the call to approximately 12-15 minutes.
+
+### Instrument A — Tele-Free-Cog (Telephone Cognitive Assessment)
+Ask these questions in order. Score 1 point for each correct answer (0-24 total).
+
+**Orientation (0-8):** Ask year, season, month, day of week, day of month, state, county, city.
+**Registration (0-3):** "I'm going to say three words. Please repeat them: APPLE, TABLE, PENNY."
+**Attention (0-5):** "Please spell WORLD backwards." (D-L-R-O-W, 1 point per letter in correct position)
+**Recall (0-3):** "Can you tell me the three words I asked you to remember?"
+**Language (0-2):** "What do you call the thing you use to write with?" (pen/pencil) "What season comes after winter?" (spring)
+**Verbal Fluency (0-3):** "In 30 seconds, name as many animals as you can." (1 pt for 1-4, 2 pts for 5-9, 3 pts for 10+)
+
+### Instrument B — STEADI Fall Risk Screen (0-14)
+Ask these questions. Score 1 point for each YES answer.
+
+"In the past year, have you:"
+1. Fallen?
+2. Felt unsteady when standing or walking?
+3. Worried about falling?
+
+"Do you have difficulty with any of these?"
+4-14: Rising from a chair, walking across a room, climbing stairs, getting dressed, bathing, using the toilet, preparing meals, light housework, shopping, managing money, using the telephone.
+
+### Instrument C — UCLA-3 Loneliness Scale (3-9)
+"I'd like to ask about how you've been feeling socially."
+
+Q1: "How often do you feel that you lack companionship? Hardly ever, some of the time, or often?"
+Score: 1=hardly ever, 2=some of the time, 3=often
+
+Q2: "How often do you feel left out? Hardly ever, some of the time, or often?"
+Score: Same scale
+
+Q3: "How often do you feel isolated from others? Hardly ever, some of the time, or often?"
+Score: Same scale. Total range: 3-9.
+
+### Instrument D — Lawton IADL (0-7)
+"I'd like to ask about some daily activities."
+
+Score 1 point for each activity the person can do INDEPENDENTLY:
+1. Using the telephone
+2. Shopping for groceries
+3. Preparing meals
+4. Doing laundry
+5. Managing medications
+6. Handling finances
+7. Using transportation
+`;
+
 export const CALL_SYSTEM_PROMPT = `You are a warm, patient, and empathetic AI wellness check-in caller for claudecare, a program that supports isolated seniors through regular phone calls. Your name is "claudecare." You speak clearly and at a moderate pace, using simple language appropriate for elderly adults.
 
 ## CALL STRUCTURE
@@ -84,7 +137,7 @@ Score: 1 point each (day, date, year, DLROW). Total 0-4.
 If you have information from previous calls, reference something specific. Example: "Last week you mentioned your tomatoes were coming in — how are they doing?"
 
 ## TOOL USE
-After the call, you MUST call the "submit_assessment" tool with all collected scores and flags.
+After the call, you MUST call the "submit_assessment" tool with all collected scores. Do NOT assign a flag or escalation tier — the system calculates those automatically from the scores you submit.
 
 ## IMPORTANT RULES
 1. Never diagnose or prescribe. You are screening, not treating.
@@ -94,6 +147,7 @@ After the call, you MUST call the "submit_assessment" tool with all collected sc
 5. If someone doesn't want to answer a question, note it and move on gracefully.
 6. Always maintain a warm, caring tone throughout the entire call.`;
 
+// Weekly assessment tool — collects core screening instruments
 export const ASSESSMENT_TOOL = {
   name: "submit_assessment",
   description: "Submit the assessment scores collected during the call. Call this at the end of every call.",
@@ -109,11 +163,34 @@ export const ASSESSMENT_TOOL = {
       phq2_triggered_cssrs: { type: "boolean", description: "Whether PHQ-2 >= 3 triggered C-SSRS" },
       cssrs_result: { type: "string", description: "C-SSRS result: none, passive_ideation, active_ideation, plan, intent, prior_attempt" },
       ottawa_score: { type: "integer", description: "Ottawa 3DY score (0-4)", minimum: 0, maximum: 4 },
-      flag: { type: "string", enum: ["green", "yellow", "red"], description: "Overall flag based on all scores" },
-      summary: { type: "string", description: "Brief narrative summary of the call" },
-      escalation_tier: { type: "string", enum: ["none", "routine", "urgent", "immediate"], description: "Escalation tier if needed" },
-      escalation_reason: { type: "string", description: "Reason for escalation, if any" },
+      summary: { type: "string", description: "Brief narrative summary of the call (2-3 sentences)" },
     },
-    required: ["meals", "sleep", "health", "social", "mobility", "phq2_score", "phq2_triggered_cssrs", "ottawa_score", "flag", "summary"],
+    required: ["meals", "sleep", "health", "social", "mobility", "phq2_score", "phq2_triggered_cssrs", "ottawa_score", "summary"],
+  },
+};
+
+// Quarterly assessment tool — includes additional instruments
+export const QUARTERLY_ASSESSMENT_TOOL = {
+  name: "submit_assessment",
+  description: "Submit the assessment scores collected during the quarterly call. Call this at the end of every call.",
+  input_schema: {
+    type: "object" as const,
+    properties: {
+      meals: { type: "integer", description: "Meals score 1-5 (1=poor, 5=good)", minimum: 1, maximum: 5 },
+      sleep: { type: "integer", description: "Sleep score 1-5", minimum: 1, maximum: 5 },
+      health: { type: "integer", description: "Health score 1-5", minimum: 1, maximum: 5 },
+      social: { type: "integer", description: "Social contact score 1-5", minimum: 1, maximum: 5 },
+      mobility: { type: "integer", description: "Mobility score 1-5", minimum: 1, maximum: 5 },
+      phq2_score: { type: "integer", description: "PHQ-2 total (0-6)", minimum: 0, maximum: 6 },
+      phq2_triggered_cssrs: { type: "boolean", description: "Whether PHQ-2 >= 3 triggered C-SSRS" },
+      cssrs_result: { type: "string", description: "C-SSRS result: none, passive_ideation, active_ideation, plan, intent, prior_attempt" },
+      ottawa_score: { type: "integer", description: "Ottawa 3DY score (0-4)", minimum: 0, maximum: 4 },
+      tele_free_cog_score: { type: "integer", description: "Telephone-Free-Cog score (0-24, lower=worse)", minimum: 0, maximum: 24 },
+      steadi_score: { type: "integer", description: "STEADI fall risk score (0-14, higher=more risk)", minimum: 0, maximum: 14 },
+      ucla_loneliness_score: { type: "integer", description: "UCLA-3 loneliness score (3-9, higher=more lonely)", minimum: 3, maximum: 9 },
+      lawton_iadl_score: { type: "integer", description: "Lawton IADL score (0-7, lower=more impaired)", minimum: 0, maximum: 7 },
+      summary: { type: "string", description: "Brief narrative summary of the call (2-3 sentences)" },
+    },
+    required: ["meals", "sleep", "health", "social", "mobility", "phq2_score", "phq2_triggered_cssrs", "ottawa_score", "tele_free_cog_score", "steadi_score", "ucla_loneliness_score", "lawton_iadl_score", "summary"],
   },
 };
