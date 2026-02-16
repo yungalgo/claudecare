@@ -1,15 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { env } from "../env.ts";
 
-function getClient() {
-  if (!env.ANTHROPIC_API_KEY) {
-    console.warn("[claude] No API key configured");
-    return null;
-  }
-  return new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
-}
-
-export const anthropic = getClient();
+export const anthropic = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
 
 export const CALL_SYSTEM_PROMPT = `You are a warm, patient, and empathetic AI wellness check-in caller for claudecare, a program that supports isolated seniors through regular phone calls. Your name is "claudecare." You speak clearly and at a moderate pace, using simple language appropriate for elderly adults.
 

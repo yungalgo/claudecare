@@ -1,38 +1,49 @@
 import { Hono } from "hono";
 import { db, schema } from "../lib/db.ts";
-import { eq, desc, like, or } from "drizzle-orm";
+import { eq, desc, like, or, and } from "drizzle-orm";
 import { z } from "zod/v4";
+import type { AppVariables } from "../types.ts";
 
-export const personRoutes = new Hono();
+export const personRoutes = new Hono<{ Variables: AppVariables }>();
 
-// List all persons (with optional search)
+// List all persons (with optional search) — scoped to user
 personRoutes.get("/", async (c) => {
+  const userId = c.get("userId");
   const search = c.req.query("search");
   const status = c.req.query("status") ?? "active";
 
-  let query = db.select().from(schema.persons).$dynamic();
+  const conditions = [eq(schema.persons.userId, userId)];
 
   if (status !== "all") {
-    query = query.where(eq(schema.persons.status, status));
+    conditions.push(eq(schema.persons.status, status));
   }
 
   if (search) {
-    query = query.where(
+    conditions.push(
       or(
         like(schema.persons.name, `%${search}%`),
         like(schema.persons.phone, `%${search}%`),
-      ),
+      )!,
     );
   }
 
-  const persons = await query.orderBy(desc(schema.persons.updatedAt));
+  const persons = await db
+    .select()
+    .from(schema.persons)
+    .where(and(...conditions))
+    .orderBy(desc(schema.persons.updatedAt));
+
   return c.json(persons);
 });
 
-// Get single person
+// Get single person — scoped to user
 personRoutes.get("/:id", async (c) => {
   const id = c.req.param("id");
-  const [person] = await db.select().from(schema.persons).where(eq(schema.persons.id, id));
+  const userId = c.get("userId");
+  const [person] = await db
+    .select()
+    .from(schema.persons)
+    .where(and(eq(schema.persons.id, id), eq(schema.persons.userId, userId)));
   if (!person) return c.json({ error: "Person not found" }, 404);
   return c.json(person);
 });
@@ -47,38 +58,46 @@ const createPersonSchema = z.object({
   notes: z.string().optional(),
 });
 
-// Create person
+// Create person — assigned to user
 personRoutes.post("/", async (c) => {
+  const userId = c.get("userId");
   const body = await c.req.json();
   const data = createPersonSchema.parse(body);
-  const [person] = await db.insert(schema.persons).values(data).returning();
+  const [person] = await db.insert(schema.persons).values({ ...data, userId }).returning();
   return c.json(person, 201);
 });
 
-// Update person
+// Update person — scoped to user
 personRoutes.patch("/:id", async (c) => {
   const id = c.req.param("id");
+  const userId = c.get("userId");
   const body = await c.req.json();
+  const data = createPersonSchema.partial().parse(body);
   const [person] = await db
     .update(schema.persons)
-    .set(body)
-    .where(eq(schema.persons.id, id))
+    .set(data)
+    .where(and(eq(schema.persons.id, id), eq(schema.persons.userId, userId)))
     .returning();
   if (!person) return c.json({ error: "Person not found" }, 404);
   return c.json(person);
 });
 
-// Delete person
+// Delete person — scoped to user
 personRoutes.delete("/:id", async (c) => {
   const id = c.req.param("id");
-  await db.delete(schema.persons).where(eq(schema.persons.id, id));
+  const userId = c.get("userId");
+  const result = await db
+    .delete(schema.persons)
+    .where(and(eq(schema.persons.id, id), eq(schema.persons.userId, userId)));
   return c.json({ ok: true });
 });
 
-// CSV upload — bulk create persons
+// CSV upload — bulk create persons — assigned to user
 personRoutes.post("/upload", async (c) => {
+  const userId = c.get("userId");
   const body = await c.req.json();
   const rows = z.array(createPersonSchema).parse(body.rows);
-  const inserted = await db.insert(schema.persons).values(rows).returning();
+  const values = rows.map((r) => ({ ...r, userId }));
+  const inserted = await db.insert(schema.persons).values(values).returning();
   return c.json({ count: inserted.length, persons: inserted }, 201);
 });

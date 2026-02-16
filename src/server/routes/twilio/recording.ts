@@ -1,14 +1,18 @@
 import { Hono } from "hono";
 import { db, schema } from "../../lib/db.ts";
 import { eq } from "drizzle-orm";
+import { twilioSignatureMiddleware } from "../../lib/twilio.ts";
 
-export const twilioRecordingRoutes = new Hono();
+type TwilioVars = { Variables: { twilioBody: Record<string, string> } };
+export const twilioRecordingRoutes = new Hono<TwilioVars>();
+
+twilioRecordingRoutes.use("/*", twilioSignatureMiddleware);
 
 // Recording status webhook — Twilio posts when recording is ready
 twilioRecordingRoutes.post("/", async (c) => {
-  const body = await c.req.parseBody();
-  const callSid = body.CallSid as string;
-  const recordingUrl = body.RecordingUrl as string;
+  const body = c.get("twilioBody") as Record<string, string>;
+  const callSid = body.CallSid;
+  const recordingUrl = body.RecordingUrl;
 
   console.log(`[twilio:recording] ${callSid} → ${recordingUrl}`);
 

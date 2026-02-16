@@ -3,22 +3,12 @@ import { env } from "../env.ts";
 
 const FROM = "ClaudeCare <noreply@claudecare.com>";
 
-function getClient() {
-  if (!env.RESEND_API_KEY) {
-    console.warn("[email] No RESEND_API_KEY — emails will be logged only");
-    return null;
-  }
-  return new Resend(env.RESEND_API_KEY);
-}
-
-const resend = getClient();
+const resend = new Resend(env.RESEND_API_KEY);
 
 // --- Password Reset ---
 
 export async function sendPasswordResetEmail(to: string, resetUrl: string) {
   console.log(`[email] Password reset for ${to}: ${resetUrl}`);
-
-  if (!resend) return;
 
   await resend.emails.send({
     from: FROM,
@@ -60,8 +50,6 @@ export async function sendEscalationAlert(to: string[], data: EscalationEmailDat
   const tierLabel = data.tier.charAt(0).toUpperCase() + data.tier.slice(1);
 
   console.log(`[email] Escalation alert (${data.tier}) for ${data.personName} → ${to.join(", ")}`);
-
-  if (!resend) return;
 
   await resend.emails.send({
     from: FROM,

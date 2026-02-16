@@ -12,6 +12,7 @@ import { Person } from "./pages/Person.tsx";
 import { Calls } from "./pages/Calls.tsx";
 import { Escalations } from "./pages/Escalations.tsx";
 import { Upload } from "./pages/Upload.tsx";
+import { Analytics } from "./pages/Analytics.tsx";
 
 function Logo({ size = "default" }: { size?: "default" | "sm" }) {
   const s = size === "sm" ? "w-7 h-7" : "w-8 h-8";
@@ -34,6 +35,7 @@ const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: DashboardIcon },
   { to: "/calls", label: "Calls", icon: CallsIcon },
   { to: "/escalations", label: "Escalations", icon: EscalationsIcon },
+  { to: "/analytics", label: "Analytics", icon: AnalyticsIcon },
   { to: "/upload", label: "Upload", icon: UploadIcon },
 ];
 
@@ -98,6 +100,7 @@ export function App() {
       <Route path="/persons/:id" element={<RequireAuth><AppLayout><Person /></AppLayout></RequireAuth>} />
       <Route path="/calls" element={<RequireAuth><AppLayout><Calls /></AppLayout></RequireAuth>} />
       <Route path="/escalations" element={<RequireAuth><AppLayout><Escalations /></AppLayout></RequireAuth>} />
+      <Route path="/analytics" element={<RequireAuth><AppLayout><Analytics /></AppLayout></RequireAuth>} />
       <Route path="/upload" element={<RequireAuth><AppLayout><Upload /></AppLayout></RequireAuth>} />
 
       {/* Catch-all */}
@@ -133,6 +136,16 @@ function EscalationsIcon({ className }: { className?: string }) {
       <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
       <line x1="12" y1="9" x2="12" y2="13" />
       <line x1="12" y1="17" x2="12.01" y2="17" />
+    </svg>
+  );
+}
+
+function AnalyticsIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="20" x2="18" y2="10" />
+      <line x1="12" y1="20" x2="12" y2="4" />
+      <line x1="6" y1="20" x2="6" y2="14" />
     </svg>
   );
 }

@@ -5,7 +5,9 @@ import { createEscalation } from "../lib/escalation.ts";
 
 export async function processPostCall(callId: string) {
   const [call] = await db.select().from(schema.calls).where(eq(schema.calls.id, callId));
-  if (!call) return;
+  if (!call) {
+    throw new Error(`[post-call] Call ${callId} not found`);
+  }
 
   // Get the assessment created during the call
   const [assessment] = await db
@@ -14,8 +16,7 @@ export async function processPostCall(callId: string) {
     .where(eq(schema.assessments.callId, callId));
 
   if (!assessment) {
-    console.log(`[post-call] No assessment for call ${callId}`);
-    return;
+    throw new Error(`[post-call] No assessment for call ${callId}`);
   }
 
   // Re-score and flag

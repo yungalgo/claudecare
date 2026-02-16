@@ -7,14 +7,26 @@ import { personRoutes } from "./routes/persons.ts";
 import { callRoutes } from "./routes/calls.ts";
 import { assessmentRoutes } from "./routes/assessments.ts";
 import { escalationRoutes } from "./routes/escalations.ts";
+import { analyticsRoutes } from "./routes/analytics.ts";
 import { twilioVoiceRoutes } from "./routes/twilio/voice.ts";
 import { twilioStatusRoutes } from "./routes/twilio/status.ts";
 import { twilioRecordingRoutes } from "./routes/twilio/recording.ts";
 import { handleWebSocket } from "./ws/handler.ts";
+import { consumeWsToken } from "./lib/twilio.ts";
+import type { AppVariables } from "./types.ts";
 
-const app = new Hono();
+const app = new Hono<{ Variables: AppVariables }>();
 
-app.use("/*", cors());
+app.use(
+  "/*",
+  cors({
+    origin: [
+      env.BASE_URL,
+      ...(env.BASE_URL.includes("localhost") ? ["http://localhost:5173"] : []),
+    ],
+    credentials: true,
+  }),
+);
 
 // --- Auth routes (handled by better-auth) ---
 app.on(["GET", "POST"], "/api/auth/*", (c) => {
@@ -27,6 +39,7 @@ app.use("/api/*", async (c, next) => {
   if (
     path.startsWith("/api/auth/") ||
     path.startsWith("/api/twilio/") ||
+    path.startsWith("/api/dev/") ||
     path === "/api/health"
   ) {
     return next();
@@ -35,6 +48,8 @@ app.use("/api/*", async (c, next) => {
   if (!session) {
     return c.json({ error: "Unauthorized" }, 401);
   }
+  c.set("userId", session.user.id);
+  c.set("userEmail", session.user.email);
   return next();
 });
 
@@ -43,12 +58,38 @@ app.route("/api/persons", personRoutes);
 app.route("/api/calls", callRoutes);
 app.route("/api/assessments", assessmentRoutes);
 app.route("/api/escalations", escalationRoutes);
+app.route("/api/analytics", analyticsRoutes);
 app.route("/api/twilio/voice", twilioVoiceRoutes);
 app.route("/api/twilio/status", twilioStatusRoutes);
 app.route("/api/twilio/recording", twilioRecordingRoutes);
 
 // Health check
 app.get("/api/health", (c) => c.json({ ok: true, name: "claudecare" }));
+
+// --- Dev-only: trigger call without auth (localhost only) ---
+app.post("/api/dev/trigger-call", async (c) => {
+  const host = c.req.header("host") ?? "";
+  if (!host.includes("localhost")) {
+    return c.json({ error: "Dev endpoint only available on localhost" }, 403);
+  }
+  const { personId } = await c.req.json();
+  const { db, schema } = await import("./lib/db.ts");
+  const { eq } = await import("drizzle-orm");
+  const { initiateCall } = await import("./lib/twilio.ts");
+  const [person] = await db.select().from(schema.persons).where(eq(schema.persons.id, personId));
+  if (!person) return c.json({ error: "Person not found" }, 404);
+  const [call] = await db.insert(schema.calls).values({
+    personId,
+    callType: "weekly",
+    status: "scheduled",
+    scheduledFor: new Date(),
+  }).returning();
+  // Call Twilio directly (skip pg-boss queue for dev)
+  console.log(`[dev] Triggering call ${call.id} for ${person.name} (${person.phone})`);
+  console.log(`[dev] BASE_URL=${env.BASE_URL}`);
+  await initiateCall(call.id, person.id, person.phone);
+  return c.json(call, 201);
+});
 
 // --- Serve React SPA (production) ---
 app.use("/*", serveStatic({ root: "./dist/client" }));
@@ -61,7 +102,15 @@ const server = Bun.serve({
     // Upgrade WebSocket connections for Twilio ConversationRelay
     const url = new URL(req.url);
     if (url.pathname === "/ws/conversation-relay") {
-      const upgraded = server.upgrade(req);
+      const wsToken = url.searchParams.get("wsToken");
+      if (!wsToken) {
+        return new Response("Missing wsToken", { status: 401 });
+      }
+      const tokenData = consumeWsToken(wsToken);
+      if (!tokenData) {
+        return new Response("Invalid or expired wsToken", { status: 401 });
+      }
+      const upgraded = server.upgrade(req, { data: tokenData });
       if (upgraded) return undefined;
       return new Response("WebSocket upgrade failed", { status: 400 });
     }
@@ -77,4 +126,7 @@ console.log(`[claudecare] Server running on http://localhost:${server.port}`);
 import("./jobs/boss.ts")
   .then((m) => m.startWorkers())
   .then(() => console.log("[claudecare] Background workers started"))
-  .catch((err) => console.warn("[claudecare] Workers not started:", err.message));
+  .catch((err) => {
+    console.error("[claudecare] FATAL: Workers failed to start:", err.message);
+    process.exit(1);
+  });

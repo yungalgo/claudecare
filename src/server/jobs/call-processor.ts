@@ -6,14 +6,12 @@ export async function processCall(callId: string) {
   // Get call and person info
   const [call] = await db.select().from(schema.calls).where(eq(schema.calls.id, callId));
   if (!call) {
-    console.error(`[call-processor] Call ${callId} not found`);
-    return;
+    throw new Error(`[call-processor] Call ${callId} not found`);
   }
 
   const [person] = await db.select().from(schema.persons).where(eq(schema.persons.id, call.personId));
   if (!person) {
-    console.error(`[call-processor] Person ${call.personId} not found`);
-    return;
+    throw new Error(`[call-processor] Person ${call.personId} not found`);
   }
 
   if (person.status !== "active") {

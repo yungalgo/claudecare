@@ -1,7 +1,6 @@
 import { anthropic, CALL_SYSTEM_PROMPT, ASSESSMENT_TOOL } from "../lib/claude.ts";
 import { db, schema } from "../lib/db.ts";
-import { eq } from "drizzle-orm";
-import { createEscalation } from "../lib/escalation.ts";
+import { eq, and, sql } from "drizzle-orm";
 
 interface ConversationState {
   personId: string;
@@ -35,8 +34,6 @@ export function deleteSession(callSid: string) {
 
 // Get the opening message from Claude
 export async function getGreeting(state: ConversationState): Promise<string> {
-  if (!anthropic) return `Hello ${state.personName}, this is claudecare calling for your weekly check-in. How are you doing today?`;
-
   const response = await anthropic.messages.create({
     model: "claude-opus-4-6",
     max_tokens: 300,
@@ -55,13 +52,6 @@ export async function processUtterance(state: ConversationState, utterance: stri
   state.messages.push({ role: "user", content: utterance });
   state.transcript.push(`${state.personName}: ${utterance}`);
 
-  if (!anthropic) {
-    const fallback = "I hear you. Thank you for sharing that. Let me continue with our check-in.";
-    state.messages.push({ role: "assistant", content: fallback });
-    state.transcript.push(`claudecare: ${fallback}`);
-    return fallback;
-  }
-
   const response = await anthropic.messages.create({
     model: "claude-opus-4-6",
     max_tokens: 500,
@@ -75,7 +65,6 @@ export async function processUtterance(state: ConversationState, utterance: stri
     if (block.type === "text") {
       text += block.text;
     } else if (block.type === "tool_use" && block.name === "submit_assessment") {
-      // Process the assessment submission
       await handleAssessmentSubmission(state, block.input as Record<string, unknown>);
     }
   }
@@ -88,10 +77,14 @@ export async function processUtterance(state: ConversationState, utterance: stri
   return text;
 }
 
+/**
+ * Save assessment and transcript. Flag computation and escalation creation
+ * are handled by the post-call job (triggered by Twilio status webhook).
+ */
 async function handleAssessmentSubmission(state: ConversationState, input: Record<string, unknown>) {
   console.log(`[protocol] Assessment submitted for ${state.personName}:`, input);
 
-  // Insert assessment
+  // Insert assessment (flag will be recomputed by post-call job)
   await db.insert(schema.assessments).values({
     callId: state.callId,
     personId: state.personId,
@@ -116,25 +109,22 @@ async function handleAssessmentSubmission(state: ConversationState, input: Recor
     })
     .where(eq(schema.calls.id, state.callId));
 
-  // Update person flag
+  // Update person lastCallAt and callCount (completed calls only)
+  const [countResult] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(schema.calls)
+    .where(
+      and(
+        eq(schema.calls.personId, state.personId),
+        eq(schema.calls.status, "completed"),
+      ),
+    );
+
   await db
     .update(schema.persons)
     .set({
-      flag: input.flag as string,
       lastCallAt: new Date(),
-      callCount: (await db.select().from(schema.calls).where(eq(schema.calls.personId, state.personId))).length,
+      callCount: (countResult?.count ?? 0) + 1, // +1 for current call not yet marked completed
     })
     .where(eq(schema.persons.id, state.personId));
-
-  // Create escalation if needed
-  const tier = input.escalation_tier as string;
-  if (tier && tier !== "none") {
-    await createEscalation({
-      personId: state.personId,
-      callId: state.callId,
-      tier,
-      reason: (input.escalation_reason as string) ?? "Flagged during call",
-      details: input.summary as string,
-    });
-  }
 }
