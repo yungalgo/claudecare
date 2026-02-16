@@ -76,6 +76,8 @@ export function Person() {
   const [escalations, setEscalations] = useState<EscalationData[]>([]);
   const [loading, setLoading] = useState(true);
   const [calling, setCalling] = useState(false);
+  const [callType, setCallType] = useState<"weekly" | "quarterly">("weekly");
+  const [showCallMenu, setShowCallMenu] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -95,12 +97,13 @@ export function Person() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  async function triggerCall() {
+  async function triggerCall(type: "weekly" | "quarterly") {
     if (!id) return;
     setCalling(true);
+    setShowCallMenu(false);
     try {
-      await api.post("/calls/trigger", { personId: id, callType: "weekly" });
-      toast.success("Call triggered successfully");
+      await api.post("/calls/trigger", { personId: id, callType: type });
+      toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} call triggered successfully`);
       const c = await api.get<CallData[]>(`/calls?personId=${id}`);
       setCalls(c);
     } catch (err) {
@@ -139,12 +142,53 @@ export function Person() {
             <Badge variant={person.status === "active" ? "success" : "outline"}>{person.status}</Badge>
           </div>
         </div>
-        <Button onClick={triggerCall} disabled={calling} variant="secondary">
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-            <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z" />
-          </svg>
-          {calling ? "Calling..." : "Call Now"}
-        </Button>
+        <div className="relative">
+          <div className="flex">
+            <Button
+              onClick={() => triggerCall(callType)}
+              disabled={calling}
+              variant="secondary"
+              className="rounded-r-none border-r-0"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z" />
+              </svg>
+              {calling ? "Calling..." : `${callType.charAt(0).toUpperCase() + callType.slice(1)} Call`}
+            </Button>
+            <Button
+              onClick={() => setShowCallMenu(!showCallMenu)}
+              disabled={calling}
+              variant="secondary"
+              size="md"
+              className="rounded-l-none px-2.5 border-l border-border/30"
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </Button>
+          </div>
+          {showCallMenu && (
+            <div className="absolute right-0 top-full mt-1.5 z-10 w-52 rounded-xl border border-border bg-card shadow-warm overflow-hidden">
+              <button
+                type="button"
+                onClick={() => { setCallType("weekly"); setShowCallMenu(false); }}
+                className={`w-full text-left px-4 py-3 text-sm transition-colors cursor-pointer hover:bg-muted ${callType === "weekly" ? "bg-muted/60 font-medium" : ""}`}
+              >
+                <div className="font-medium text-foreground">Weekly Call</div>
+                <div className="text-xs text-muted-foreground mt-0.5">5-8 min wellness check-in</div>
+              </button>
+              <div className="border-t border-border" />
+              <button
+                type="button"
+                onClick={() => { setCallType("quarterly"); setShowCallMenu(false); }}
+                className={`w-full text-left px-4 py-3 text-sm transition-colors cursor-pointer hover:bg-muted ${callType === "quarterly" ? "bg-muted/60 font-medium" : ""}`}
+              >
+                <div className="font-medium text-foreground">Quarterly Call</div>
+                <div className="text-xs text-muted-foreground mt-0.5">12-15 min comprehensive review</div>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Info cards */}
