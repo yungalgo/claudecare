@@ -30,7 +30,7 @@ Run both `bun run dev` and `bun run dev:vite` simultaneously during development.
 
 Single Bun process serving HTTP (Hono), WebSocket (Twilio ConversationRelay), and background jobs (pg-boss) — no separate worker processes. Multi-tenant: all data scoped by `userId`.
 
-**Call flow (sequential):** pg-boss cron at `CALL_WINDOW_START` fires `schedule-calls` → `scheduleNextCall()` finds next active person due (no call in 7+ days) → creates call record → queues `process-call` → Twilio initiates call with WS token → Twilio connects WebSocket to `/ws/conversation-relay` (token-authenticated) → Claude Opus 4.6 runs 6-phase conversation protocol → Claude submits assessment via tool_use → protocol saves assessment + transcript → Twilio status webhook fires `post-call` job → scoring pipeline runs → updates person flag → creates escalations → chains `process-next-call` after `CALL_GAP_SECONDS` delay → loop continues until `CALL_WINDOW_END`.
+**Call flow (sequential):** pg-boss cron at `CALL_WINDOW_START` fires `schedule-calls` → `scheduleNextCall()` finds next active person due (no call in 7+ days) → creates call record → queues `process-call` → Twilio initiates call with WS token → Twilio connects WebSocket to `/ws/conversation-relay` (token-authenticated) → Claude Opus 4.6 runs 6-phase conversation protocol → Claude submits assessment via tool_use → protocol saves assessment + transcript → Twilio status webhook fires `post-call` job → scoring pipeline runs → updates person flag → creates escalations → chains `process-next-call` immediately → loop continues until `CALL_WINDOW_END`.
 
 **Scoring pipeline** (`src/server/lib/scoring.ts`): C-SSRS result (highest priority) → PHQ-2 (≥3 triggers escalation) → Ottawa 3DY → CLOVA 5 individual metrics (any ≤2 flags) → quarterly instruments. Returns a flag and array of escalation objects.
 
@@ -65,7 +65,6 @@ All required — server crashes on startup if any are missing or empty:
 | `CALL_WINDOW_START` | Daily call window start time (default: `09:00`) |
 | `CALL_WINDOW_END` | Daily call window end time (default: `17:00`) |
 | `CALL_WINDOW_TZ` | Timezone for call window (default: `America/New_York`) |
-| `CALL_GAP_SECONDS` | Delay between sequential calls (default: `10`) |
 
 ## Tech Stack
 

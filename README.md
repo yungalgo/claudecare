@@ -99,13 +99,13 @@ pg-boss cron (CALL_WINDOW_START)
   -> assessment + summary saved to DB
   -> Twilio status webhook fires post-call job
   -> scoring pipeline computes flag + escalations
-  -> chains process-next-call after CALL_GAP_SECONDS delay
+  -> chains process-next-call immediately
   -> loop continues until CALL_WINDOW_END
 ```
 
 ### Key Design Decisions
 
-**Sequential call processing.** Calls are made one at a time, not in parallel. This simplifies resource management, prevents overwhelming Twilio rate limits, and ensures the system stays within API budgets. The gap between calls is configurable (`CALL_GAP_SECONDS`).
+**Sequential call processing.** Calls are made one at a time, not in parallel. This simplifies resource management, prevents overwhelming Twilio rate limits, and ensures the system stays within API budgets. The next call is queued immediately after post-call processing completes.
 
 **Deterministic scoring, not AI scoring.** The AI agent collects data through conversation. All clinical flag/escalation decisions are made by a rule-based scoring function with hardcoded thresholds from clinical literature. This ensures reproducibility and auditability.
 
@@ -287,7 +287,6 @@ All required variables are validated at startup via Zod. The server exits with a
 | `CALL_WINDOW_START` | No | `09:00` | Daily call window start (HH:MM) |
 | `CALL_WINDOW_END` | No | `17:00` | Daily call window end (HH:MM) |
 | `CALL_WINDOW_TZ` | No | `America/New_York` | Timezone for call window |
-| `CALL_GAP_SECONDS` | No | `10` | Delay between sequential calls |
 | `TWILIO_INTELLIGENCE_SERVICE_SID` | No | | Enables enriched transcripts |
 
 ---
